@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../utils/session_manager.dart';
 import 'onboarding_screen.dart';
+import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -55,28 +57,31 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    _textSlide = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
-        .animate(
-          CurvedAnimation(
-            parent: _controller,
-            curve: const Interval(0.4, 0.8, curve: Curves.easeOut),
-          ),
-        );
+    _textSlide =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.4, 0.8, curve: Curves.easeOut),
+      ),
+    );
 
     _controller.forward();
 
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => const OnboardingScreen(),
-            transitionsBuilder: (_, animation, __, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: const Duration(milliseconds: 500),
-          ),
-        );
-      }
+    // CEK SESSION — jika sudah login langsung ke HomeScreen
+    Future.delayed(const Duration(seconds: 3), () async {
+      if (!mounted) return;
+      final isLoggedIn = await SessionManager.instance.isLoggedIn();
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) =>
+              isLoggedIn ? const HomeScreen() : const OnboardingScreen(),
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
     });
   }
 

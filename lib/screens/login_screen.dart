@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../database/database_helper.dart';
+import '../utils/session_manager.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
 
@@ -14,11 +16,13 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
+  // username field dipakai sebagai no. WhatsApp
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _agreeTerms = false;
   bool _isLoading = false;
+  String? _errorMsg;
 
   late AnimationController _animController;
   late Animation<double> _cardOpacity;
@@ -49,20 +53,55 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
-  void _handleLogin() {
-    setState(() => _isLoading = true);
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => const HomeScreen(),
-            transitionsBuilder: (_, animation, __, child) =>
-                FadeTransition(opacity: animation, child: child),
-            transitionDuration: const Duration(milliseconds: 400),
-          ),
-        );
-      }
+  Future<void> _handleLogin() async {
+    final noWa = _usernameController.text.trim();
+    final password = _passwordController.text;
+
+    if (noWa.isEmpty || password.isEmpty) {
+      setState(() => _errorMsg = 'No. WhatsApp dan password wajib diisi');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMsg = null;
     });
+
+    try {
+      final user = await DatabaseHelper.instance.getUserByWa(noWa);
+
+      if (user == null || user['password'] != password) {
+        setState(() {
+          _errorMsg = 'No. WhatsApp atau password salah';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      await SessionManager.instance.saveSession(
+        userId: user['id'],
+        noWa: user['no_whatsapp'],
+        nama: user['nama_lengkap'],
+        isVerifiedWa: user['is_verified_wa'] == 1,
+        isVerifiedBerkas: user['is_verified_berkas'] == 1,
+        isProfilLengkap: user['is_profil_lengkap'] == 1,
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => const HomeScreen(),
+          transitionsBuilder: (_, animation, __, child) =>
+              FadeTransition(opacity: animation, child: child),
+          transitionDuration: const Duration(milliseconds: 400),
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _errorMsg = 'Terjadi kesalahan, coba lagi';
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -116,13 +155,40 @@ class _LoginScreenState extends State<LoginScreen>
                           color: AppColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 24),
+
+                      // Error message
+                      if (_errorMsg != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF2F2),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFFECACA)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline_rounded,
+                                  color: Color(0xFFDC2626), size: 16),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(_errorMsg!,
+                                    style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 12,
+                                        color: const Color(0xFFDC2626))),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
                       _FormField(
-                        label: 'Username/Email',
-                        hint: 'Masukkan username atau email',
+                        label: 'No. WhatsApp',
+                        hint: 'Masukkan no. WhatsApp terdaftar',
                         controller: _usernameController,
-                        prefixIcon: Icons.person_outline_rounded,
-                        keyboardType: TextInputType.emailAddress,
+                        prefixIcon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
                       ),
                       const SizedBox(height: 16),
                       _PasswordField(

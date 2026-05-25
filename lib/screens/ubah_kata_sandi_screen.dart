@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../database/database_helper.dart';
+import '../utils/session_manager.dart';
 
 class UbahKataSandiScreen extends StatefulWidget {
   const UbahKataSandiScreen({super.key});
@@ -19,6 +21,30 @@ class _UbahKataSandiScreenState extends State<UbahKataSandiScreen> {
   bool _showPasswordBaru = false;
   bool _showKonfirmasi = false;
 
+  String? _namaUser;
+  String? _emailUser;
+  int? _userId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    _userId = await SessionManager.instance.getUserId();
+    if (_userId == null) return;
+    final user = await DatabaseHelper.instance.getUserById(_userId!);
+    if (user != null && mounted) {
+      setState(() {
+        _namaUser = user['nama_lengkap']?.toString() ?? 'Pengguna';
+        _emailUser = user['email']?.toString().isNotEmpty == true
+            ? user['email'].toString()
+            : user['no_whatsapp']?.toString() ?? '-';
+      });
+    }
+  }
+
   @override
   void dispose() {
     _passwordLamaController.dispose();
@@ -27,7 +53,7 @@ class _UbahKataSandiScreenState extends State<UbahKataSandiScreen> {
     super.dispose();
   }
 
-  void _simpanPerubahan() {
+  Future<void> _simpanPerubahan() async {
     final lama = _passwordLamaController.text.trim();
     final baru = _passwordBaruController.text.trim();
     final konfirmasi = _konfirmasiController.text.trim();
@@ -44,16 +70,25 @@ class _UbahKataSandiScreenState extends State<UbahKataSandiScreen> {
       _showSnackBar('Konfirmasi password tidak cocok', isError: true);
       return;
     }
+
+    // Validasi password lama dari SQLite
+    if (_userId != null) {
+      final user = await DatabaseHelper.instance.getUserById(_userId!);
+      if (user == null || user['password'] != lama) {
+        _showSnackBar('Password lama tidak sesuai', isError: true);
+        return;
+      }
+      await DatabaseHelper.instance.updateUser(_userId!, {'password': baru});
+    }
+
     _showSnackBar('Kata sandi berhasil diperbarui');
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          message,
-          style: GoogleFonts.plusJakartaSans(fontSize: 13),
-        ),
+        content:
+            Text(message, style: GoogleFonts.plusJakartaSans(fontSize: 13)),
         backgroundColor:
             isError ? const Color(0xFFEF4444) : AppColors.dilapakTeal,
         behavior: SnackBarBehavior.floating,
@@ -96,14 +131,11 @@ class _UbahKataSandiScreenState extends State<UbahKataSandiScreen> {
             color: AppColors.textPrimary, size: 22),
         onPressed: () => Navigator.pop(context),
       ),
-      title: Text(
-        'Ubah Kata Sandi',
-        style: GoogleFonts.plusJakartaSans(
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
-        ),
-      ),
+      title: Text('Ubah Kata Sandi',
+          style: GoogleFonts.plusJakartaSans(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary)),
       bottom: const PreferredSize(
         preferredSize: Size.fromHeight(1),
         child: Divider(height: 1, color: AppColors.borderColor),
@@ -112,20 +144,14 @@ class _UbahKataSandiScreenState extends State<UbahKataSandiScreen> {
   }
 
   Widget _buildInfoAkunSection() {
-    return const _SectionCard(
+    return _SectionCard(
       icon: Icons.person_outline_rounded,
       title: 'Informasi Akun',
       child: Column(
         children: [
-          _ReadOnlyField(
-            label: 'Nama Pengguna',
-            value: 'Tes programmer kominfo',
-          ),
-          SizedBox(height: 14),
-          _ReadOnlyField(
-            label: 'Username / Email',
-            value: 'tesprogramerkmf@gmail.com',
-          ),
+          _ReadOnlyField(label: 'Nama Pengguna', value: _namaUser ?? '...'),
+          const SizedBox(height: 14),
+          _ReadOnlyField(label: 'Username / Email', value: _emailUser ?? '...'),
         ],
       ),
     );
@@ -176,10 +202,9 @@ class _UbahKataSandiScreenState extends State<UbahKataSandiScreen> {
         color: AppColors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, -3),
-          ),
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, -3))
         ],
       ),
       child: GestureDetector(
@@ -195,14 +220,11 @@ class _UbahKataSandiScreenState extends State<UbahKataSandiScreen> {
             children: [
               const Icon(Icons.save_rounded, color: AppColors.white, size: 20),
               const SizedBox(width: 8),
-              Text(
-                'Simpan Perubahan',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.white,
-                ),
-              ),
+              Text('Simpan Perubahan',
+                  style: GoogleFonts.plusJakartaSans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.white)),
             ],
           ),
         ),
@@ -211,17 +233,14 @@ class _UbahKataSandiScreenState extends State<UbahKataSandiScreen> {
   }
 }
 
+// ── Widget desain asli TIDAK DIUBAH ──
+
 class _SectionCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final Widget child;
-
-  const _SectionCard({
-    required this.icon,
-    required this.title,
-    required this.child,
-  });
-
+  const _SectionCard(
+      {required this.icon, required this.title, required this.child});
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -232,10 +251,9 @@ class _SectionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2))
         ],
       ),
       child: Column(
@@ -245,14 +263,11 @@ class _SectionCard extends StatelessWidget {
             children: [
               Icon(icon, color: AppColors.dilapakTeal, size: 20),
               const SizedBox(width: 8),
-              Text(
-                title,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
-                ),
-              ),
+              Text(title,
+                  style: GoogleFonts.plusJakartaSans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary)),
             ],
           ),
           const SizedBox(height: 14),
@@ -266,22 +281,17 @@ class _SectionCard extends StatelessWidget {
 class _ReadOnlyField extends StatelessWidget {
   final String label;
   final String value;
-
   const _ReadOnlyField({required this.label, required this.value});
-
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        Text(label,
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary)),
         const SizedBox(height: 6),
         Container(
           width: double.infinity,
@@ -291,13 +301,9 @@ class _ReadOnlyField extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: AppColors.borderColor),
           ),
-          child: Text(
-            value,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13.5,
-              color: AppColors.textMuted,
-            ),
-          ),
+          child: Text(value,
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13.5, color: AppColors.textMuted)),
         ),
       ],
     );
@@ -311,81 +317,63 @@ class _PasswordField extends StatelessWidget {
   final bool showPassword;
   final VoidCallback onToggle;
   final String? helperText;
-
-  const _PasswordField({
-    required this.label,
-    required this.hint,
-    required this.controller,
-    required this.showPassword,
-    required this.onToggle,
-    this.helperText,
-  });
-
+  const _PasswordField(
+      {required this.label,
+      required this.hint,
+      required this.controller,
+      required this.showPassword,
+      required this.onToggle,
+      this.helperText});
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        Text(label,
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary)),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
           obscureText: !showPassword,
           style: GoogleFonts.plusJakartaSans(
-            fontSize: 13.5,
-            color: AppColors.textPrimary,
-          ),
+              fontSize: 13.5, color: AppColors.textPrimary),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: GoogleFonts.plusJakartaSans(
-              fontSize: 13.5,
-              color: AppColors.textMuted,
-            ),
+                fontSize: 13.5, color: AppColors.textMuted),
             filled: true,
             fillColor: AppColors.white,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.borderColor),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.borderColor)),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.borderColor),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.borderColor)),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide:
-                  const BorderSide(color: AppColors.dilapakTeal, width: 1.5),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: AppColors.dilapakTeal, width: 1.5)),
             suffixIcon: IconButton(
               icon: Icon(
-                showPassword
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-                color: AppColors.textMuted,
-                size: 20,
-              ),
+                  showPassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: AppColors.textMuted,
+                  size: 20),
               onPressed: onToggle,
             ),
           ),
         ),
         if (helperText != null) ...[
           const SizedBox(height: 5),
-          Text(
-            helperText!,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 11,
-              color: AppColors.textMuted,
-            ),
-          ),
+          Text(helperText!,
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 11, color: AppColors.textMuted)),
         ],
       ],
     );

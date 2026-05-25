@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../database/database_helper.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -42,10 +43,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  void _handleRegister() {
+  Future<void> _handleRegister() async {
     if (_nikController.text.trim().isEmpty ||
         _namaController.text.trim().isEmpty ||
-        _emailController.text.trim().isEmpty ||
+        _whatsappController.text.trim().isEmpty ||
         _passwordController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -72,10 +73,64 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       return;
     }
+    if (_passwordController.text.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Password minimal 8 karakter',
+              style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
-    Future.delayed(const Duration(seconds: 2), () {
+
+    try {
+      final db = DatabaseHelper.instance;
+
+      // Cek nomor WA sudah terdaftar
+      final isTaken = await db.isWaTaken(_whatsappController.text.trim());
+      if (isTaken) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No. WhatsApp sudah terdaftar',
+                style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // Generate kode verifikasi 6 digit — disimpan, ditampilkan saat user tekan "Kirim Kode" di layar verifikasi
+      final kodeVerif =
+          (100000 + DateTime.now().millisecondsSinceEpoch % 900000).toString();
+
+      await db.insertUser({
+        'nik': _nikController.text.trim(),
+        'nama_lengkap': _namaController.text.trim(),
+        'email': _emailController.text.trim(),
+        'no_whatsapp': _whatsappController.text.trim(),
+        'password': _passwordController.text,
+        'kode_verifikasi': kodeVerif,
+        'is_verified_wa': 0,
+        'is_verified_berkas': 0,
+        'is_profil_lengkap': 0,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
       if (!mounted) return;
       setState(() => _isLoading = false);
+
+      // Tampilkan snackbar sukses lalu ke halaman Login
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Akun berhasil dibuat! Silakan masuk.',
@@ -86,6 +141,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       );
+
       Future.delayed(const Duration(milliseconds: 800), () {
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
@@ -97,9 +153,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         );
       });
-    });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: $e',
+              style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    }
   }
 
+  // ─── BUILD — DESAIN ASLI TIDAK DIUBAH SAMA SEKALI ───
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -236,6 +306,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 }
 
+// ─── SEMUA WIDGET DI BAWAH INI SAMA PERSIS DENGAN DESAIN ASLI ───
+
 class _GreenHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -318,19 +390,14 @@ class _GreenHeader extends StatelessWidget {
 
 class _SectionLabel extends StatelessWidget {
   final String text;
-
   const _SectionLabel({required this.text});
-
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: GoogleFonts.plusJakartaSans(
-        fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
-      ),
-    );
+    return Text(text,
+        style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary));
   }
 }
 
@@ -338,13 +405,8 @@ class _KTPDropdown extends StatelessWidget {
   final String value;
   final List<String> options;
   final ValueChanged<String?> onChanged;
-
-  const _KTPDropdown({
-    required this.value,
-    required this.options,
-    required this.onChanged,
-  });
-
+  const _KTPDropdown(
+      {required this.value, required this.options, required this.onChanged});
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -358,20 +420,14 @@ class _KTPDropdown extends StatelessWidget {
         child: DropdownButton<String>(
           value: value,
           isExpanded: true,
-          icon: const Icon(
-            Icons.keyboard_arrow_down_rounded,
-            color: AppColors.textSecondary,
-          ),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded,
+              color: AppColors.textSecondary),
           style: GoogleFonts.plusJakartaSans(
-            fontSize: 14,
-            color: AppColors.textPrimary,
-          ),
+              fontSize: 14, color: AppColors.textPrimary),
           onChanged: onChanged,
           items: options
-              .map(
-                (item) =>
-                    DropdownMenuItem<String>(value: item, child: Text(item)),
-              )
+              .map((item) =>
+                  DropdownMenuItem<String>(value: item, child: Text(item)))
               .toList(),
         ),
       ),
@@ -384,27 +440,21 @@ class _RegisterFormField extends StatelessWidget {
   final String hint;
   final TextEditingController controller;
   final TextInputType keyboardType;
-
-  const _RegisterFormField({
-    required this.label,
-    required this.hint,
-    required this.controller,
-    this.keyboardType = TextInputType.text,
-  });
-
+  const _RegisterFormField(
+      {required this.label,
+      required this.hint,
+      required this.controller,
+      this.keyboardType = TextInputType.text});
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        Text(label,
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary)),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
@@ -416,20 +466,14 @@ class _RegisterFormField extends StatelessWidget {
             controller: controller,
             keyboardType: keyboardType,
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 14,
-              color: AppColors.textPrimary,
-            ),
+                fontSize: 14, color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
-                color: AppColors.textMuted,
-              ),
+                  fontSize: 14, color: AppColors.textMuted),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
           ),
         ),
@@ -444,28 +488,22 @@ class _RegisterPasswordField extends StatelessWidget {
   final TextEditingController controller;
   final bool obscure;
   final VoidCallback onToggle;
-
-  const _RegisterPasswordField({
-    required this.label,
-    required this.hint,
-    required this.controller,
-    required this.obscure,
-    required this.onToggle,
-  });
-
+  const _RegisterPasswordField(
+      {required this.label,
+      required this.hint,
+      required this.controller,
+      required this.obscure,
+      required this.onToggle});
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        Text(label,
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary)),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
@@ -477,30 +515,23 @@ class _RegisterPasswordField extends StatelessWidget {
             controller: controller,
             obscureText: obscure,
             style: GoogleFonts.plusJakartaSans(
-              fontSize: 14,
-              color: AppColors.textPrimary,
-            ),
+                fontSize: 14, color: AppColors.textPrimary),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
-                color: AppColors.textMuted,
-              ),
+                  fontSize: 14, color: AppColors.textMuted),
               suffixIcon: GestureDetector(
                 onTap: onToggle,
                 child: Icon(
-                  obscure
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                  color: AppColors.textMuted,
-                  size: 20,
-                ),
+                    obscure
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    color: AppColors.textMuted,
+                    size: 20),
               ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
           ),
         ),
@@ -512,9 +543,7 @@ class _RegisterPasswordField extends StatelessWidget {
 class _TermsRow extends StatelessWidget {
   final bool value;
   final ValueChanged<bool?> onChanged;
-
   const _TermsRow({required this.value, required this.onChanged});
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -535,8 +564,7 @@ class _TermsRow extends StatelessWidget {
               onChanged: onChanged,
               activeColor: AppColors.greenPrimary,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
-              ),
+                  borderRadius: BorderRadius.circular(4)),
               side: const BorderSide(color: AppColors.borderColor, width: 1.5),
             ),
           ),
@@ -545,10 +573,7 @@ class _TermsRow extends StatelessWidget {
             child: Text(
               'Saya menyetujui syarat dan ketentuan yang berlaku',
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-                height: 1.5,
-              ),
+                  fontSize: 13, color: AppColors.textSecondary, height: 1.5),
             ),
           ),
         ],
@@ -560,9 +585,7 @@ class _TermsRow extends StatelessWidget {
 class _RegisterButton extends StatelessWidget {
   final bool isLoading;
   final VoidCallback onTap;
-
   const _RegisterButton({required this.isLoading, required this.onTap});
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -586,10 +609,7 @@ class _RegisterButton extends StatelessWidget {
                   width: 22,
                   height: 22,
                   child: CircularProgressIndicator(
-                    color: AppColors.white,
-                    strokeWidth: 2.5,
-                  ),
-                )
+                      color: AppColors.white, strokeWidth: 2.5))
               : Text(
                   'BUAT AKUN',
                   style: GoogleFonts.plusJakartaSans(

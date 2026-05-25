@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
-import '../data/wilayah_madiun.dart';
+import '../database/database_helper.dart';
+import '../utils/session_manager.dart';
+import '../data/wilayah_data.dart';
 
 class EditProfilScreen extends StatefulWidget {
   const EditProfilScreen({super.key});
@@ -12,36 +14,154 @@ class EditProfilScreen extends StatefulWidget {
 }
 
 class _EditProfilScreenState extends State<EditProfilScreen> {
-  final _namaController = TextEditingController(text: 'Tes programmer kominfo');
-  final _waController = TextEditingController(text: '085748630511');
+  // NIK & No KK kini bisa diedit
+  final _nikController = TextEditingController();
+  final _noKkController = TextEditingController();
+  final _namaController = TextEditingController();
+  final _waController = TextEditingController();
 
-  String _selectedJenisKelamin = 'LAKI-LAKI';
-  String _selectedProvinsi = 'JAWA TIMUR';
-  String _selectedKabupaten = 'KOTA MADIUN';
+  String? _selectedJenisKelamin;
+  String? _selectedProvinsi;
+  String? _selectedKabupaten;
   String? _selectedKecamatan;
   String? _selectedKelurahan;
 
+  int? _userId;
+  bool _isSaving = false;
+
   final List<String> _jenisKelaminOptions = ['LAKI-LAKI', 'PEREMPUAN'];
-  final List<String> _provinsiOptions = [
-    'JAWA TIMUR',
-    'JAWA TENGAH',
-    'JAWA BARAT'
-  ];
-  final List<String> _kabupatenOptions = [
-    'KOTA MADIUN',
-    'KABUPATEN MADIUN',
-    'MAGETAN',
-    'NGAWI',
-    'PONOROGO',
-  ];
+
+  List<String> get _provinsiOptions =>
+      WilayahIndonesia.provinsi.map((e) => e.toUpperCase()).toList();
+
+  List<String> get _kabupatenOptions {
+    if (_selectedProvinsi == null) return [];
+    final key = WilayahIndonesia.provinsi.firstWhere(
+      (e) => e.toUpperCase() == _selectedProvinsi,
+      orElse: () => '',
+    );
+    return WilayahIndonesia.getKabupatenKota(key)
+        .map((e) => e.toUpperCase())
+        .toList();
+  }
+
+  List<String> get _kecamatanOptions {
+    if (_selectedKabupaten == null) return [];
+    // Cari key asli (mixed case) dari kabupatenKota
+    String keyKab = '';
+    for (final entry in WilayahIndonesia.kabupatenKota.entries) {
+      for (final kab in entry.value) {
+        if (kab.toUpperCase() == _selectedKabupaten) {
+          keyKab = kab;
+          break;
+        }
+      }
+      if (keyKab.isNotEmpty) break;
+    }
+    return WilayahIndonesia.getKecamatan(keyKab)
+        .map((e) => e.toUpperCase())
+        .toList();
+  }
+
+  List<String> get _kelurahanOptions {
+    if (_selectedKabupaten != 'KOTA MADIUN' || _selectedKecamatan == null) {
+      return [];
+    }
+    // Convert uppercase kecamatan ke title case untuk lookup WilayahMadiun
+    final kecTitleCase = _selectedKecamatan!
+        .split(' ')
+        .map((w) =>
+            w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1).toLowerCase())
+        .join(' ');
+    return WilayahMadiun.getKelurahan(kecTitleCase)
+        .map((e) => e.toUpperCase())
+        .toList();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
 
   @override
   void dispose() {
+    _nikController.dispose();
+    _noKkController.dispose();
     _namaController.dispose();
     _waController.dispose();
     super.dispose();
   }
 
+  Future<void> _loadData() async {
+    _userId = await SessionManager.instance.getUserId();
+    if (_userId == null) return;
+    final user = await DatabaseHelper.instance.getUserById(_userId!);
+    if (user != null && mounted) {
+      setState(() {
+        _nikController.text = user['nik']?.toString() ?? '';
+        _noKkController.text = user['no_kk']?.toString() ?? '';
+        _namaController.text = user['nama_lengkap']?.toString() ?? '';
+        _waController.text = user['no_whatsapp']?.toString() ?? '';
+
+        final jk = user['jenis_kelamin']?.toString().toUpperCase();
+        _selectedJenisKelamin = _jenisKelaminOptions.contains(jk) ? jk : null;
+
+        final prov = user['provinsi']?.toString().toUpperCase();
+        _selectedProvinsi = _provinsiOptions.contains(prov) ? prov : null;
+
+        _selectedKabupaten = user['kabupaten']?.toString().toUpperCase();
+        _selectedKecamatan = user['kecamatan']?.toString().toUpperCase();
+        _selectedKelurahan = user['kelurahan']?.toString().toUpperCase();
+      });
+    }
+  }
+
+  Future<void> _simpan() async {
+    if (_userId == null) return;
+    setState(() => _isSaving = true);
+
+    final isLengkap = _namaController.text.trim().isNotEmpty &&
+        _nikController.text.trim().isNotEmpty &&
+        _selectedJenisKelamin != null &&
+        _selectedProvinsi != null &&
+        _selectedKabupaten != null;
+
+    await DatabaseHelper.instance.updateUser(_userId!, {
+      'nik': _nikController.text.trim(),
+      'no_kk': _noKkController.text.trim(),
+      'nama_lengkap': _namaController.text.trim(),
+      'no_whatsapp': _waController.text.trim(),
+      'jenis_kelamin': _selectedJenisKelamin,
+      'provinsi': _selectedProvinsi,
+      'kabupaten': _selectedKabupaten,
+      'kecamatan': _selectedKecamatan,
+      'kelurahan': _selectedKelurahan,
+      'is_profil_lengkap': isLengkap ? 1 : 0,
+    });
+
+    await SessionManager.instance.updateSession(
+      nama: _namaController.text.trim(),
+      isProfilLengkap: isLengkap,
+    );
+
+    if (mounted) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Profil berhasil diperbarui',
+              style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+          backgroundColor: AppColors.dilapakTeal,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+      Navigator.pop(context, true);
+    }
+  }
+
+  // ─── BUILD — DESAIN ASLI TIDAK DIUBAH SAMA SEKALI ───
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,12 +171,21 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            // DATA IDENTITAS — NIK & No KK kini _EditableField bukan _LockedField
             _buildSection(
               title: 'Data Identitas',
               children: [
-                const _LockedField(label: 'NIK', value: '3520050050050055'),
+                _EditableField(
+                  label: 'NIK',
+                  controller: _nikController,
+                  keyboardType: TextInputType.number,
+                ),
                 const SizedBox(height: 14),
-                const _LockedField(label: 'NO KK', value: '3520060060060066'),
+                _EditableField(
+                  label: 'NO KK',
+                  controller: _noKkController,
+                  keyboardType: TextInputType.number,
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -64,16 +193,15 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
               title: 'Informasi Pribadi',
               children: [
                 _EditableField(
-                  label: 'Nama Lengkap',
-                  controller: _namaController,
-                ),
+                    label: 'Nama Lengkap', controller: _namaController),
                 const SizedBox(height: 14),
                 _DropdownField(
                   label: 'Jenis Kelamin',
                   value: _selectedJenisKelamin,
                   options: _jenisKelaminOptions,
+                  hint: 'Pilih Jenis Kelamin',
                   onChanged: (val) =>
-                      setState(() => _selectedJenisKelamin = val!),
+                      setState(() => _selectedJenisKelamin = val),
                 ),
                 const SizedBox(height: 14),
                 _EditableField(
@@ -91,41 +219,79 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
                   label: 'Provinsi',
                   value: _selectedProvinsi,
                   options: _provinsiOptions,
-                  onChanged: (val) => setState(() => _selectedProvinsi = val!),
-                ),
-                const SizedBox(height: 14),
-                _DropdownField(
-                  label: 'Kabupaten/Kota',
-                  value: _selectedKabupaten,
-                  options: _kabupatenOptions,
-                  onChanged: (val) => setState(() => _selectedKabupaten = val!),
-                ),
-                const SizedBox(height: 14),
-                _DropdownField(
-                  label: 'Kecamatan',
-                  value: _selectedKecamatan,
-                  options: WilayahMadiun.kecamatan,
-                  hint: 'Pilih Kecamatan',
+                  hint: 'Pilih Provinsi',
                   onChanged: (val) => setState(() {
-                    _selectedKecamatan = val;
+                    _selectedProvinsi = val;
+                    _selectedKabupaten = null;
+                    _selectedKecamatan = null;
                     _selectedKelurahan = null;
                   }),
                 ),
                 const SizedBox(height: 14),
                 _DropdownField(
-                  label: 'Kelurahan/Desa',
-                  value: _selectedKelurahan,
-                  options: _selectedKecamatan != null
-                      ? WilayahMadiun.getKelurahan(_selectedKecamatan!)
-                      : [],
-                  hint: _selectedKecamatan == null
-                      ? 'Pilih Kecamatan dulu'
-                      : 'Pilih Kelurahan',
-                  enabled: _selectedKecamatan != null,
-                  onChanged: _selectedKecamatan != null
-                      ? (val) => setState(() => _selectedKelurahan = val)
+                  label: 'Kabupaten/Kota',
+                  value: _kabupatenOptions.contains(_selectedKabupaten)
+                      ? _selectedKabupaten
+                      : null,
+                  options: _kabupatenOptions,
+                  hint: _selectedProvinsi == null
+                      ? 'Pilih Provinsi dulu'
+                      : 'Pilih Kabupaten/Kota',
+                  enabled: _selectedProvinsi != null,
+                  onChanged: _selectedProvinsi != null
+                      ? (val) => setState(() {
+                            _selectedKabupaten = val;
+                            _selectedKecamatan = null;
+                            _selectedKelurahan = null;
+                          })
                       : null,
                 ),
+                const SizedBox(height: 14),
+                _DropdownField(
+                  label: 'Kecamatan',
+                  value: _kecamatanOptions.contains(_selectedKecamatan)
+                      ? _selectedKecamatan
+                      : null,
+                  options: _kecamatanOptions,
+                  hint: _selectedKabupaten == null
+                      ? 'Pilih Kab/Kota dulu'
+                      : _kecamatanOptions.isEmpty
+                          ? 'Ketik di bawah'
+                          : 'Pilih Kecamatan',
+                  enabled: _selectedKabupaten != null &&
+                      _kecamatanOptions.isNotEmpty,
+                  onChanged: (_selectedKabupaten != null &&
+                          _kecamatanOptions.isNotEmpty)
+                      ? (val) => setState(() {
+                            _selectedKecamatan = val;
+                            _selectedKelurahan = null;
+                          })
+                      : null,
+                ),
+                const SizedBox(height: 14),
+                // Kelurahan dropdown (hanya Kota Madiun), lainnya field bebas
+                if (_kelurahanOptions.isNotEmpty)
+                  _DropdownField(
+                    label: 'Kelurahan/Desa',
+                    value: _kelurahanOptions.contains(_selectedKelurahan)
+                        ? _selectedKelurahan
+                        : null,
+                    options: _kelurahanOptions,
+                    hint: _selectedKecamatan == null
+                        ? 'Pilih Kecamatan dulu'
+                        : 'Pilih Kelurahan',
+                    enabled: _selectedKecamatan != null,
+                    onChanged: _selectedKecamatan != null
+                        ? (val) => setState(() => _selectedKelurahan = val)
+                        : null,
+                  )
+                else
+                  _EditableFieldSimple(
+                    label: 'Kelurahan/Desa',
+                    value: _selectedKelurahan ?? '',
+                    onChanged: (v) =>
+                        setState(() => _selectedKelurahan = v.toUpperCase()),
+                  ),
               ],
             ),
             const SizedBox(height: 100),
@@ -165,10 +331,8 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
     );
   }
 
-  Widget _buildSection({
-    required String title,
-    required List<Widget> children,
-  }) {
+  Widget _buildSection(
+      {required String title, required List<Widget> children}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -177,23 +341,19 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: AppColors.dilapakTeal,
-            ),
-          ),
+          Text(title,
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.dilapakTeal)),
           const SizedBox(height: 14),
           ...children,
         ],
@@ -209,27 +369,13 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
         color: AppColors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, -3),
-          ),
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, -3)),
         ],
       ),
       child: GestureDetector(
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Profil berhasil diperbarui',
-                style: GoogleFonts.plusJakartaSans(fontSize: 13),
-              ),
-              backgroundColor: AppColors.dilapakTeal,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
-          );
-        },
+        onTap: _isSaving ? null : _simpan,
         child: Container(
           height: 52,
           decoration: BoxDecoration(
@@ -239,16 +385,20 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.save_rounded, color: AppColors.white, size: 20),
+              _isSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          color: AppColors.white, strokeWidth: 2.5))
+                  : const Icon(Icons.save_rounded,
+                      color: AppColors.white, size: 20),
               const SizedBox(width: 8),
-              Text(
-                'Update Profil',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.white,
-                ),
-              ),
+              Text('Update Profil',
+                  style: GoogleFonts.plusJakartaSans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.white)),
             ],
           ),
         ),
@@ -257,48 +407,47 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
   }
 }
 
-class _LockedField extends StatelessWidget {
+// ─── WIDGET DESAIN ASLI SAMA PERSIS ───
+
+class _EditableField extends StatelessWidget {
   final String label;
-  final String value;
-
-  const _LockedField({required this.label, required this.value});
-
+  final TextEditingController controller;
+  final TextInputType keyboardType;
+  const _EditableField(
+      {required this.label,
+      required this.controller,
+      this.keyboardType = TextInputType.text});
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        Text(label,
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary)),
         const SizedBox(height: 6),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-          decoration: BoxDecoration(
-            color: AppColors.inputBackground,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.borderColor),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  value,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13.5,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ),
-              const Icon(Icons.lock_outline_rounded,
-                  size: 18, color: AppColors.textMuted),
-            ],
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          style: GoogleFonts.plusJakartaSans(
+              fontSize: 13.5, color: AppColors.textPrimary),
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: AppColors.white,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.borderColor)),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.borderColor)),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: AppColors.dilapakTeal, width: 1.5)),
           ),
         ),
       ],
@@ -306,56 +455,43 @@ class _LockedField extends StatelessWidget {
   }
 }
 
-class _EditableField extends StatelessWidget {
+class _EditableFieldSimple extends StatelessWidget {
   final String label;
-  final TextEditingController controller;
-  final TextInputType keyboardType;
-
-  const _EditableField({
-    required this.label,
-    required this.controller,
-    this.keyboardType = TextInputType.text,
-  });
-
+  final String value;
+  final ValueChanged<String> onChanged;
+  const _EditableFieldSimple(
+      {required this.label, required this.value, required this.onChanged});
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        Text(label,
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary)),
         const SizedBox(height: 6),
         TextField(
-          controller: controller,
-          keyboardType: keyboardType,
+          controller: TextEditingController(text: value),
+          onChanged: onChanged,
           style: GoogleFonts.plusJakartaSans(
-            fontSize: 13.5,
-            color: AppColors.textPrimary,
-          ),
+              fontSize: 13.5, color: AppColors.textPrimary),
           decoration: InputDecoration(
             filled: true,
             fillColor: AppColors.white,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.borderColor),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.borderColor)),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.borderColor),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.borderColor)),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide:
-                  const BorderSide(color: AppColors.dilapakTeal, width: 1.5),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: AppColors.dilapakTeal, width: 1.5)),
           ),
         ),
       ],
@@ -370,38 +506,31 @@ class _DropdownField extends StatelessWidget {
   final ValueChanged<String?>? onChanged;
   final String? hint;
   final bool enabled;
-
-  const _DropdownField({
-    required this.label,
-    required this.value,
-    required this.options,
-    this.onChanged,
-    this.hint,
-    this.enabled = true,
-  });
-
+  const _DropdownField(
+      {required this.label,
+      required this.value,
+      required this.options,
+      this.onChanged,
+      this.hint,
+      this.enabled = true});
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        Text(label,
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary)),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: value,
+          value: options.contains(value) ? value : null,
           onChanged: onChanged,
           style: GoogleFonts.plusJakartaSans(
-            fontSize: 13.5,
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w500,
-          ),
+              fontSize: 13.5,
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w500),
           hint: hint != null
               ? Text(hint!,
                   style: GoogleFonts.plusJakartaSans(
@@ -415,31 +544,27 @@ class _DropdownField extends StatelessWidget {
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.borderColor),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.borderColor)),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.borderColor),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.borderColor)),
             disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.borderColor),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.borderColor)),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide:
-                  const BorderSide(color: AppColors.dilapakTeal, width: 1.5),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: AppColors.dilapakTeal, width: 1.5)),
           ),
           items: options.isEmpty
               ? null
               : options
                   .map((o) => DropdownMenuItem(
-                        value: o,
-                        child: Text(o,
-                            style: GoogleFonts.plusJakartaSans(fontSize: 13.5)),
-                      ))
+                      value: o,
+                      child: Text(o,
+                          style: GoogleFonts.plusJakartaSans(fontSize: 13.5),
+                          overflow: TextOverflow.ellipsis)))
                   .toList(),
         ),
       ],

@@ -29,80 +29,80 @@ class AppColors {
 
 class AppTextStyles {
   static TextStyle headline1(Color color) => GoogleFonts.plusJakartaSans(
-    fontSize: 28,
-    fontWeight: FontWeight.w800,
-    color: color,
-    height: 1.25,
-  );
+        fontSize: 28,
+        fontWeight: FontWeight.w800,
+        color: color,
+        height: 1.25,
+      );
 
   static TextStyle headline2(Color color) => GoogleFonts.plusJakartaSans(
-    fontSize: 22,
-    fontWeight: FontWeight.w700,
-    color: color,
-    height: 1.3,
-  );
+        fontSize: 22,
+        fontWeight: FontWeight.w700,
+        color: color,
+        height: 1.3,
+      );
 
   static TextStyle headline3(Color color) => GoogleFonts.plusJakartaSans(
-    fontSize: 18,
-    fontWeight: FontWeight.w700,
-    color: color,
-    height: 1.3,
-  );
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: color,
+        height: 1.3,
+      );
 
   static TextStyle body(Color color) => GoogleFonts.plusJakartaSans(
-    fontSize: 14,
-    fontWeight: FontWeight.w400,
-    color: color,
-    height: 1.6,
-  );
+        fontSize: 14,
+        fontWeight: FontWeight.w400,
+        color: color,
+        height: 1.6,
+      );
 
   static TextStyle bodyMedium(Color color) => GoogleFonts.plusJakartaSans(
-    fontSize: 14,
-    fontWeight: FontWeight.w500,
-    color: color,
-  );
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: color,
+      );
 
   static TextStyle bodySmall(Color color) => GoogleFonts.plusJakartaSans(
-    fontSize: 12,
-    fontWeight: FontWeight.w400,
-    color: color,
-  );
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+        color: color,
+      );
 
   static TextStyle label(Color color) => GoogleFonts.plusJakartaSans(
-    fontSize: 13,
-    fontWeight: FontWeight.w600,
-    color: color,
-  );
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: color,
+      );
 
   static TextStyle button(Color color) => GoogleFonts.plusJakartaSans(
-    fontSize: 15,
-    fontWeight: FontWeight.w700,
-    color: color,
-    letterSpacing: 0.3,
-  );
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        color: color,
+        letterSpacing: 0.3,
+      );
 
   static TextStyle appName(Color color) => GoogleFonts.plusJakartaSans(
-    fontSize: 32,
-    fontWeight: FontWeight.w800,
-    color: color,
-  );
+        fontSize: 32,
+        fontWeight: FontWeight.w800,
+        color: color,
+      );
 
   static TextStyle caption(Color color) => GoogleFonts.plusJakartaSans(
-    fontSize: 11,
-    fontWeight: FontWeight.w500,
-    color: color,
-    letterSpacing: 1.2,
-  );
+        fontSize: 11,
+        fontWeight: FontWeight.w500,
+        color: color,
+        letterSpacing: 1.2,
+      );
 }
 
 class AppTheme {
   static ThemeData get theme => ThemeData(
-    useMaterial3: true,
-    colorScheme: const ColorScheme.light(
-      primary: AppColors.dilapakTeal,
-      surface: AppColors.white,
-    ),
-    scaffoldBackgroundColor: AppColors.white,
-    fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
-  );
+        useMaterial3: true,
+        colorScheme: const ColorScheme.light(
+          primary: AppColors.dilapakTeal,
+          surface: AppColors.white,
+        ),
+        scaffoldBackgroundColor: AppColors.white,
+        fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
+      );
 }

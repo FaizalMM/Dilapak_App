@@ -1,46 +1,80 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-import '../models/permohonan_model.dart';
 import '../theme/app_theme.dart';
-import '../widgets/status_badge.dart';
+import '../database/database_helper.dart';
 
-String _formatDateTime(DateTime dt) {
-  const bulan = [
-    '',
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'Mei',
-    'Jun',
-    'Jul',
-    'Agt',
-    'Sep',
-    'Okt',
-    'Nov',
-    'Des'
-  ];
-  final jam = dt.hour.toString().padLeft(2, '0');
-  final menit = dt.minute.toString().padLeft(2, '0');
-  return '${dt.day} ${bulan[dt.month]} ${dt.year}, $jam:$menit';
+String _formatDateTime(String? iso) {
+  if (iso == null || iso.isEmpty) return '';
+  try {
+    final dt = DateTime.parse(iso);
+    const bulan = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'Mei',
+      'Jun',
+      'Jul',
+      'Agt',
+      'Sep',
+      'Okt',
+      'Nov',
+      'Des'
+    ];
+    final jam = dt.hour.toString().padLeft(2, '0');
+    final menit = dt.minute.toString().padLeft(2, '0');
+    return '${dt.day} ${bulan[dt.month]} ${dt.year}, $jam:$menit';
+  } catch (_) {
+    return iso;
+  }
 }
 
-class TrackingScreen extends StatelessWidget {
-  final Permohonan permohonan;
+class TrackingScreen extends StatefulWidget {
+  final int permohonanId;
+  const TrackingScreen({super.key, required this.permohonanId});
 
-  const TrackingScreen({super.key, required this.permohonan});
+  @override
+  State<TrackingScreen> createState() => _TrackingScreenState();
+}
+
+class _TrackingScreenState extends State<TrackingScreen> {
+  Map<String, dynamic>? _permohonan;
+  List<Map<String, dynamic>> _tracking = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final p =
+        await DatabaseHelper.instance.getPermohonanById(widget.permohonanId);
+    final t = await DatabaseHelper.instance
+        .getTrackingByPermohonan(widget.permohonanId);
+    if (mounted)
+      setState(() {
+        _permohonan = p;
+        _tracking = t;
+        _isLoading = false;
+      });
+  }
 
   Color get _accentColor {
-    switch (permohonan.status) {
-      case StatusPermohonan.baru:
+    final status = _permohonan?['status']?.toString() ?? 'menunggu';
+    switch (status) {
+      case 'baru':
         return const Color(0xFF3B82F6);
-      case StatusPermohonan.diproses:
+      case 'diproses':
         return const Color(0xFFF59E0B);
-      case StatusPermohonan.selesai:
+      case 'selesai':
         return const Color(0xFF10B981);
-      case StatusPermohonan.ditolak:
+      case 'ditolak':
         return const Color(0xFFEF4444);
+      default:
+        return const Color(0xFFF59E0B);
     }
   }
 
@@ -57,40 +91,39 @@ class TrackingScreen extends StatelessWidget {
               color: AppColors.textPrimary, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          'Detail Permohonan',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        title: Text('Detail Permohonan',
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary)),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildInfoCard(),
-            const SizedBox(height: 20),
-            Text(
-              'Tracking Status',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildTrackingCard(),
-          ],
-        ),
-      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _permohonan == null
+              ? const Center(child: Text('Data tidak ditemukan'))
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildInfoCard(),
+                      const SizedBox(height: 20),
+                      Text('Tracking Status',
+                          style: GoogleFonts.plusJakartaSans(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary)),
+                      const SizedBox(height: 12),
+                      _buildTrackingCard(),
+                    ],
+                  ),
+                ),
     );
   }
 
   Widget _buildInfoCard() {
+    final status = _permohonan!['status']?.toString() ?? 'menunggu';
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -99,50 +132,39 @@ class TrackingScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 3))
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          StatusBadge(status: permohonan.status),
+          _StatusBadge(status: status),
           const SizedBox(height: 10),
-          Text(
-            permohonan.jenisLayanan,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
-            ),
-          ),
+          Text(_permohonan!['nama_layanan']?.toString() ?? '-',
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary)),
           const SizedBox(height: 4),
-          Text(
-            permohonan.namaPemohon,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 13,
-              color: AppColors.textSecondary,
-            ),
-          ),
+          Text(_permohonan!['nama_pemohon']?.toString() ?? '-',
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 13, color: AppColors.textSecondary)),
           const SizedBox(height: 12),
           const Divider(height: 1, color: AppColors.borderColor),
           const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
-                child: _InfoItem(
-                  label: 'NO. RESI',
-                  value: permohonan.nomorResi,
-                ),
-              ),
+                  child: _InfoItem(
+                      label: 'NO. RESI',
+                      value: _permohonan!['nomor_resi']?.toString() ?? '-')),
               Expanded(
-                child: _InfoItem(
-                  label: 'TANGGAL PENGAJUAN',
-                  value: _formatDateTime(permohonan.tanggalPengajuan),
-                ),
-              ),
+                  child: _InfoItem(
+                      label: 'TANGGAL PENGAJUAN',
+                      value: _formatDateTime(
+                          _permohonan!['tanggal_pengajuan']?.toString()))),
             ],
           ),
         ],
@@ -158,18 +180,17 @@ class TrackingScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 3))
         ],
       ),
       child: Column(
         children: List.generate(
-          permohonan.trackingSteps.length,
+          _tracking.length,
           (index) => _TrackingStepTile(
-            step: permohonan.trackingSteps[index],
-            isLast: index == permohonan.trackingSteps.length - 1,
+            step: _tracking[index],
+            isLast: index == _tracking.length - 1,
             accentColor: _accentColor,
           ),
         ),
@@ -178,56 +199,95 @@ class TrackingScreen extends StatelessWidget {
   }
 }
 
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  const _StatusBadge({required this.status});
+
+  Color get _color {
+    switch (status) {
+      case 'selesai':
+        return const Color(0xFF10B981);
+      case 'diproses':
+        return const Color(0xFFF59E0B);
+      case 'ditolak':
+        return const Color(0xFFEF4444);
+      case 'baru':
+        return const Color(0xFF3B82F6);
+      default:
+        return const Color(0xFFF59E0B);
+    }
+  }
+
+  String get _label {
+    switch (status) {
+      case 'selesai':
+        return 'Selesai';
+      case 'diproses':
+        return 'Sedang Diproses';
+      case 'ditolak':
+        return 'Ditolak';
+      case 'baru':
+        return 'Baru Diterima';
+      default:
+        return 'Menunggu';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: _color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(_label,
+          style: GoogleFonts.plusJakartaSans(
+              fontSize: 11, fontWeight: FontWeight.w700, color: _color)),
+    );
+  }
+}
+
 class _InfoItem extends StatelessWidget {
   final String label;
   final String value;
-
   const _InfoItem({required this.label, required this.value});
-
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textMuted,
-            letterSpacing: 0.3,
-          ),
-        ),
+        Text(label,
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textMuted,
+                letterSpacing: 0.3)),
         const SizedBox(height: 2),
-        Text(
-          value,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        Text(value,
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary)),
       ],
     );
   }
 }
 
 class _TrackingStepTile extends StatelessWidget {
-  final TrackingStep step;
+  final Map<String, dynamic> step;
   final bool isLast;
   final Color accentColor;
 
-  const _TrackingStepTile({
-    required this.step,
-    required this.isLast,
-    required this.accentColor,
-  });
+  const _TrackingStepTile(
+      {required this.step, required this.isLast, required this.accentColor});
 
   @override
   Widget build(BuildContext context) {
-    final bool isDone = step.status == TrackingStepStatus.selesai;
-    final bool isActive = step.status == TrackingStepStatus.aktif;
-    final bool isWaiting = step.status == TrackingStepStatus.menunggu;
+    final isDone = step['is_done'] == 1;
+    // Step aktif = step pertama yang belum selesai
+    final isActive = !isDone && !isLast;
+    final isWaiting = !isDone && isLast;
 
     return IntrinsicHeight(
       child: Row(
@@ -255,14 +315,11 @@ class _TrackingStepTile extends StatelessWidget {
                     : isActive
                         ? Center(
                             child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: accentColor,
-                              ),
-                            ),
-                          )
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: accentColor)))
                         : null,
               ),
               if (!isLast)
@@ -284,39 +341,33 @@ class _TrackingStepTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 2),
-                  Text(
-                    step.title,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: isWaiting
-                          ? AppColors.textMuted
-                          : AppColors.textPrimary,
-                    ),
-                  ),
-                  if (step.description != null) ...[
+                  Text(step['judul']?.toString() ?? '-',
+                      style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isWaiting
+                              ? AppColors.textMuted
+                              : AppColors.textPrimary)),
+                  if (step['deskripsi'] != null) ...[
                     const SizedBox(height: 2),
-                    Text(
-                      step.description!,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        color: isWaiting
-                            ? AppColors.textMuted
-                            : AppColors.textSecondary,
-                        height: 1.5,
-                      ),
-                    ),
+                    Text(step['deskripsi'].toString(),
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            color: isWaiting
+                                ? AppColors.textMuted
+                                : AppColors.textSecondary,
+                            height: 1.5)),
                   ],
-                  if (step.timestamp != null) ...[
+                  if (step['waktu'] != null &&
+                      step['waktu'].toString().isNotEmpty) ...[
                     const SizedBox(height: 4),
-                    Text(
-                      _formatDateTime(step.timestamp!),
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: isDone ? const Color(0xFF10B981) : accentColor,
-                      ),
-                    ),
+                    Text(_formatDateTime(step['waktu'].toString()),
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: isDone
+                                ? const Color(0xFF10B981)
+                                : accentColor)),
                   ],
                 ],
               ),

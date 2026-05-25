@@ -1,12 +1,12 @@
-// ignore_for_file: unused_element
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../database/database_helper.dart';
+import '../utils/session_manager.dart';
+import '../data/wilayah_data.dart';
 import '../widgets/layanan_picker_sheet.dart';
 import '../widgets/layanan_slot.dart';
-import '../data/wilayah_madiun.dart';
 
 class TambahPermohonanScreen extends StatefulWidget {
   const TambahPermohonanScreen({super.key});
@@ -45,10 +45,45 @@ class _TambahPermohonanScreenState extends State<TambahPermohonanScreen> {
 
   // DATA PERMOHONAN
   String? _statusPengajuan = 'ONLINE';
-  String? _layanan;
+  Map<String, dynamic>? _selectedLayanan;
   final _keteranganController = TextEditingController();
 
   final List<String> _statusPengajuanOptions = ['ONLINE', 'OFFLINE'];
+
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _prefillAkun();
+  }
+
+  Future<void> _prefillAkun() async {
+    final userId = await SessionManager.instance.getUserId();
+    if (userId == null) return;
+    final user = await DatabaseHelper.instance.getUserById(userId);
+    if (user != null && mounted) {
+      setState(() {
+        _noHpController.text = user['no_whatsapp']?.toString() ?? '';
+        _emailController.text = user['email']?.toString() ?? '';
+        _namaPelapController.text = user['nama_lengkap']?.toString() ?? '';
+        _nikController.text = user['nik']?.toString() ?? '';
+        _kkController.text = user['no_kk']?.toString() ?? '';
+        _namaPemohonController.text = user['nama_lengkap']?.toString() ?? '';
+        _alamatController.text = user['alamat']?.toString() ?? '';
+        _rtController.text = user['rt']?.toString() ?? '';
+        _rwController.text = user['rw']?.toString() ?? '';
+        // Kecamatan: cocokkan dengan data Madiun
+        final kec = user['kecamatan']?.toString() ?? '';
+        _kecamatan = WilayahMadiun.kecamatan.contains(kec) ? kec : null;
+        if (_kecamatan != null) {
+          final kels = WilayahMadiun.getKelurahan(_kecamatan!);
+          final kel = user['kelurahan']?.toString() ?? '';
+          _kelurahan = kels.contains(kel) ? kel : null;
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -66,34 +101,89 @@ class _TambahPermohonanScreenState extends State<TambahPermohonanScreen> {
   }
 
   Future<void> _pickLayanan() async {
-    final result =
-        await LayananPickerSheet.show(context, selectedLayanan: _layanan);
-    if (result != null) setState(() => _layanan = result);
+    // Ambil semua layanan dari SQLite, tampilkan picker
+    final allLayanan = await DatabaseHelper.instance.getAllLayanan();
+    if (!mounted) return;
+    final result = await LayananPickerSheet.showFromDb(context, allLayanan,
+        selectedLayanan: _selectedLayanan?['nama']);
+    if (result != null) setState(() => _selectedLayanan = result);
   }
 
-  void _submit() {
-    if (_layanan == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Pilih jenis layanan terlebih dahulu',
-              style: GoogleFonts.plusJakartaSans(fontSize: 13)),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
+  Future<void> _submit() async {
+    if (_selectedLayanan == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Pilih jenis layanan terlebih dahulu',
+            style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ));
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Permohonan berhasil ditambahkan',
+    if (_namaPemohonController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Nama pemohon wajib diisi',
+            style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ));
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      final userId = await SessionManager.instance.getUserId();
+      if (userId == null) return;
+
+      final resi = 'RESI-${DateTime.now().millisecondsSinceEpoch}';
+      await DatabaseHelper.instance.insertPermohonan({
+        'user_id': userId,
+        'nomor_resi': resi,
+        'layanan_id': _selectedLayanan!['id'],
+        'jenis_layanan': _selectedLayanan!['nama'],
+        'nama_pemohon': _namaPemohonController.text.trim(),
+        'nik_pemohon': _nikController.text.trim(),
+        'kecamatan': _kecamatan,
+        'kelurahan': _kelurahan,
+        'alamat': _alamatController.text.trim(),
+        'rt': _rtController.text.trim(),
+        'rw': _rwController.text.trim(),
+        'status': 'menunggu',
+        'catatan': _keteranganController.text.trim(),
+        'tanggal_pengajuan': DateTime.now().toIso8601String(),
+      });
+
+      await DatabaseHelper.instance.insertNotifikasi({
+        'user_id': userId,
+        'judul': 'Permohonan Diterima',
+        'isi':
+            'Permohonan ${_selectedLayanan!['nama']} dengan nomor $resi telah diterima dan sedang diproses.',
+        'tipe': 'permohonan',
+        'is_read': 0,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Permohonan berhasil dikirim! Resi: $resi',
             style: GoogleFonts.plusJakartaSans(fontSize: 13)),
         backgroundColor: AppColors.dilapakTeal,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+      ));
+      Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Gagal mengirim: $e',
+            style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ));
+    }
   }
 
   @override
@@ -131,17 +221,15 @@ class _TambahPermohonanScreenState extends State<TambahPermohonanScreen> {
                       icon: Icons.badge_outlined,
                       label: 'DATA PEMOHON',
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                                child: _field('NIK', _nikController,
-                                    keyboardType: TextInputType.number)),
-                            const SizedBox(width: 12),
-                            Expanded(
-                                child: _field('No KK', _kkController,
-                                    keyboardType: TextInputType.number)),
-                          ],
-                        ),
+                        Row(children: [
+                          Expanded(
+                              child: _field('NIK', _nikController,
+                                  keyboardType: TextInputType.number)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                              child: _field('No KK', _kkController,
+                                  keyboardType: TextInputType.number)),
+                        ]),
                         _gap(),
                         _field('Nama Pemohon', _namaPemohonController),
                         _gap(),
@@ -182,19 +270,17 @@ class _TambahPermohonanScreenState extends State<TambahPermohonanScreen> {
                               : null,
                         ),
                         _gap(),
-                        Row(
-                          children: [
-                            Expanded(
-                                child: _field('RT', _rtController,
-                                    hint: 'RT',
-                                    keyboardType: TextInputType.number)),
-                            const SizedBox(width: 12),
-                            Expanded(
-                                child: _field('RW', _rwController,
-                                    hint: 'RW',
-                                    keyboardType: TextInputType.number)),
-                          ],
-                        ),
+                        Row(children: [
+                          Expanded(
+                              child: _field('RT', _rtController,
+                                  hint: 'RT',
+                                  keyboardType: TextInputType.number)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                              child: _field('RW', _rwController,
+                                  hint: 'RW',
+                                  keyboardType: TextInputType.number)),
+                        ]),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -213,7 +299,7 @@ class _TambahPermohonanScreenState extends State<TambahPermohonanScreen> {
                         _gap(),
                         LayananSlot(
                           label: 'Layanan',
-                          selectedLayanan: _layanan,
+                          selectedLayanan: _selectedLayanan?['nama'],
                           onTap: _pickLayanan,
                         ),
                         _gap(),
@@ -230,13 +316,17 @@ class _TambahPermohonanScreenState extends State<TambahPermohonanScreen> {
                       width: double.infinity,
                       height: 52,
                       child: ElevatedButton.icon(
-                        onPressed: _submit,
-                        icon: const Icon(Icons.send_rounded, size: 18),
-                        label: Text(
-                          'Kirim Permohonan',
-                          style: GoogleFonts.plusJakartaSans(
-                              fontSize: 15, fontWeight: FontWeight.w700),
-                        ),
+                        onPressed: _isSubmitting ? null : _submit,
+                        icon: _isSubmitting
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2.5))
+                            : const Icon(Icons.send_rounded, size: 18),
+                        label: Text('Kirim Permohonan',
+                            style: GoogleFonts.plusJakartaSans(
+                                fontSize: 15, fontWeight: FontWeight.w700)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.dilapakTeal,
                           foregroundColor: AppColors.white,
@@ -269,13 +359,11 @@ class _TambahPermohonanScreenState extends State<TambahPermohonanScreen> {
                 color: AppColors.textPrimary, size: 22),
           ),
           const SizedBox(width: 4),
-          Text(
-            'Tambah Permohonan',
-            style: GoogleFonts.plusJakartaSans(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimary),
-          ),
+          Text('Tambah Permohonan',
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary)),
         ],
       ),
     );
@@ -294,10 +382,9 @@ class _TambahPermohonanScreenState extends State<TambahPermohonanScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 3))
         ],
       ),
       child: Column(
@@ -306,24 +393,20 @@ class _TambahPermohonanScreenState extends State<TambahPermohonanScreen> {
           Container(
             height: 2.5,
             decoration: BoxDecoration(
-              color: AppColors.dilapakTeal,
-              borderRadius: BorderRadius.circular(2),
-            ),
+                color: AppColors.dilapakTeal,
+                borderRadius: BorderRadius.circular(2)),
           ),
           const SizedBox(height: 12),
           Row(
             children: [
               Icon(icon, size: 16, color: AppColors.dilapakTeal),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.dilapakTeal,
-                  letterSpacing: 0.8,
-                ),
-              ),
+              Text(label,
+                  style: GoogleFonts.plusJakartaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.dilapakTeal,
+                      letterSpacing: 0.8)),
             ],
           ),
           const SizedBox(height: 16),
@@ -335,13 +418,10 @@ class _TambahPermohonanScreenState extends State<TambahPermohonanScreen> {
 
   SizedBox _gap() => const SizedBox(height: 14);
 
-  Widget _field(
-    String label,
-    TextEditingController controller, {
-    String? hint,
-    TextInputType keyboardType = TextInputType.text,
-    int maxLines = 1,
-  }) {
+  Widget _field(String label, TextEditingController controller,
+      {String? hint,
+      TextInputType keyboardType = TextInputType.text,
+      int maxLines = 1}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -366,18 +446,15 @@ class _TambahPermohonanScreenState extends State<TambahPermohonanScreen> {
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.borderColor),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.borderColor)),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.borderColor),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.borderColor)),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide:
-                  const BorderSide(color: AppColors.dilapakTeal, width: 1.5),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: AppColors.dilapakTeal, width: 1.5)),
           ),
         ),
       ],
@@ -402,7 +479,7 @@ class _TambahPermohonanScreenState extends State<TambahPermohonanScreen> {
                 color: AppColors.textPrimary)),
         const SizedBox(height: 6),
         DropdownButtonFormField<String>(
-          value: value,
+          value: items.contains(value) ? value : null,
           hint: Text(hint,
               style: GoogleFonts.plusJakartaSans(
                   fontSize: 13.5, color: AppColors.textMuted)),
@@ -417,22 +494,18 @@ class _TambahPermohonanScreenState extends State<TambahPermohonanScreen> {
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.borderColor),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.borderColor)),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.borderColor),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.borderColor)),
             disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppColors.borderColor),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: AppColors.borderColor)),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide:
-                  const BorderSide(color: AppColors.dilapakTeal, width: 1.5),
-            ),
+                borderRadius: BorderRadius.circular(10),
+                borderSide:
+                    const BorderSide(color: AppColors.dilapakTeal, width: 1.5)),
           ),
           items: items.isEmpty
               ? null
@@ -443,52 +516,6 @@ class _TambahPermohonanScreenState extends State<TambahPermohonanScreen> {
                           style: GoogleFonts.plusJakartaSans(fontSize: 13.5))))
                   .toList(),
           onChanged: onChanged,
-        ),
-      ],
-    );
-  }
-
-  Widget _dropdownDisabled({
-    required String label,
-    required String? value,
-    required String hint,
-    required bool enabled,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: GoogleFonts.plusJakartaSans(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary)),
-        const SizedBox(height: 6),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-          decoration: BoxDecoration(
-            color:
-                enabled ? AppColors.inputBackground : const Color(0xFFF0F0F0),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppColors.borderColor),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  value ?? hint,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13.5,
-                    color: value != null
-                        ? AppColors.textPrimary
-                        : AppColors.textMuted,
-                  ),
-                ),
-              ),
-              const Icon(Icons.keyboard_arrow_down_rounded,
-                  color: AppColors.textSecondary, size: 20),
-            ],
-          ),
         ),
       ],
     );

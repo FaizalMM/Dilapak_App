@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
+import '../database/database_helper.dart';
+import '../utils/session_manager.dart';
+import '../services/notification_service.dart';
 import 'verifikasi_berkas_screen.dart';
 
 class VerifikasiWhatsappScreen extends StatefulWidget {
@@ -20,24 +23,106 @@ class _VerifikasiWhatsappScreenState extends State<VerifikasiWhatsappScreen> {
   bool _kodeDikirim = false;
   int _countdown = 59;
   bool _isLoading = false;
+  bool _isSendingCode = false;
+
+  String? _noWaTampil;
+  String? _kodeVerifikasi;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+    _initNotifikasi();
+  }
+
+  Future<void> _initNotifikasi() async {
+    await NotificationService.instance.init();
+    await NotificationService.instance.requestPermission();
+  }
+
+  Future<void> _loadUser() async {
+    final userId = await SessionManager.instance.getUserId();
+    if (userId == null) return;
+    final user = await DatabaseHelper.instance.getUserById(userId);
+    if (mounted && user != null) {
+      setState(() {
+        _noWaTampil = user['no_whatsapp']?.toString() ?? '-';
+        _kodeVerifikasi = user['kode_verifikasi']?.toString();
+      });
+    }
+  }
 
   @override
   void dispose() {
-    for (final c in _otpControllers) {
-      c.dispose();
-    }
-    for (final f in _focusNodes) {
-      f.dispose();
-    }
+    for (final c in _otpControllers) c.dispose();
+    for (final f in _focusNodes) f.dispose();
     super.dispose();
   }
 
-  void _kirimKode() {
-    setState(() {
-      _kodeDikirim = true;
-      _countdown = 59;
-    });
-    _startCountdown();
+  // ── Kirim kode via NOTIFIKASI LOKAL ──
+  Future<void> _kirimKode() async {
+    if (_kodeVerifikasi == null || _noWaTampil == null) return;
+    if (_isSendingCode) return;
+
+    setState(() => _isSendingCode = true);
+
+    try {
+      // Kirim notifikasi lokal ke status bar HP
+      await NotificationService.instance.kirimNotifikasiOTP(
+        noWa: _noWaTampil!,
+        kode: _kodeVerifikasi!,
+      );
+
+      if (mounted) {
+        setState(() {
+          _kodeDikirim = true;
+          _countdown = 59;
+          _isSendingCode = false;
+        });
+        _startCountdown();
+
+        // Tampilkan snackbar konfirmasi bahwa notifikasi sudah dikirim
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.notifications_active_rounded,
+                    color: Colors.white, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Kode verifikasi telah dikirim ke notifikasi HP Anda.',
+                    style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13, color: Colors.white),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.dilapakTeal,
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSendingCode = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Gagal mengirim notifikasi. Pastikan izin notifikasi diaktifkan.',
+              style: GoogleFonts.plusJakartaSans(fontSize: 13),
+            ),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    }
   }
 
   void _startCountdown() {
@@ -59,21 +144,76 @@ class _VerifikasiWhatsappScreenState extends State<VerifikasiWhatsappScreen> {
   }
 
   bool get _otpLengkap => _otpControllers.every((c) => c.text.isNotEmpty);
+  String get _kodeInput => _otpControllers.map((c) => c.text).join();
 
-  void _verifikasi() {
+  Future<void> _verifikasi() async {
     setState(() => _isLoading = true);
-    Future.delayed(const Duration(seconds: 1), () {
+
+    final userId = await SessionManager.instance.getUserId();
+    if (userId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    final user = await DatabaseHelper.instance.getUserById(userId);
+    if (user == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    final kodeBenar = user['kode_verifikasi']?.toString();
+
+    if (_kodeInput == kodeBenar) {
+      // Update status verifikasi WA di SQLite
+      await DatabaseHelper.instance.updateUser(userId, {'is_verified_wa': 1});
+      await SessionManager.instance.updateSession(isVerifiedWa: true);
+
+      // Hapus notifikasi OTP dari status bar setelah berhasil
+      await NotificationService.instance.hapusNotifikasiOTP();
+
+      // Simpan notifikasi ke tabel SQLite
+      await DatabaseHelper.instance.insertNotifikasi({
+        'user_id': userId,
+        'judul': 'Nomor HP Terverifikasi',
+        'isi': 'Nomor HP Anda telah berhasil diverifikasi. '
+            'Lanjutkan upload berkas identitas untuk aktivasi penuh.',
+        'tipe': 'sukses',
+        'is_read': 0,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
       if (mounted) {
+        setState(() => _isLoading = false);
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => const VerifikasiBerkasScreen(),
+          MaterialPageRoute(builder: (_) => const VerifikasiBerkasScreen()),
+        );
+      }
+    } else {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        // Goyangkan kotak OTP (feedback visual)
+        _clearOtp();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Kode verifikasi salah. Coba lagi.',
+                style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
-        setState(() => _isLoading = false);
       }
-    });
+    }
   }
 
+  void _clearOtp() {
+    for (final c in _otpControllers) c.clear();
+    _focusNodes[0].requestFocus();
+    setState(() {});
+  }
+
+  // ─── BUILD — DESAIN ASLI TIDAK DIUBAH SAMA SEKALI ───
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -94,7 +234,7 @@ class _VerifikasiWhatsappScreenState extends State<VerifikasiWhatsappScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Keamanan akun Anda adalah prioritas kami. Silakan verifikasi nomor WhatsApp Anda untuk melanjutkan.',
+              'Keamanan akun Anda adalah prioritas kami. Silakan verifikasi nomor HP Anda untuk melanjutkan.',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 fontWeight: FontWeight.w400,
@@ -116,31 +256,22 @@ class _VerifikasiWhatsappScreenState extends State<VerifikasiWhatsappScreen> {
                           color: AppColors.dilapakTeal.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
-                          Icons.chat_rounded,
-                          color: AppColors.dilapakTeal,
-                          size: 20,
-                        ),
+                        child: const Icon(Icons.notifications_outlined,
+                            color: AppColors.dilapakTeal, size: 20),
                       ),
                       const SizedBox(width: 12),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Verifikasi WhatsApp',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          Text(
-                            'Konfirmasi nomor Anda',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
+                          Text('Verifikasi Nomor HP',
+                              style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary)),
+                          Text('Kode dikirim via notifikasi HP',
+                              style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary)),
                         ],
                       ),
                     ],
@@ -165,66 +296,99 @@ class _VerifikasiWhatsappScreenState extends State<VerifikasiWhatsappScreen> {
                       border: Border.all(color: AppColors.borderColor),
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        const Icon(Icons.phone_outlined,
+                            color: AppColors.textSecondary, size: 18),
+                        const SizedBox(width: 10),
                         Text(
-                          '+62 812-3456-7890',
+                          _noWaTampil ?? '...',
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimary,
-                          ),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary),
                         ),
-                        Text(
-                          'Ubah',
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.dilapakTeal,
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Petunjuk notifikasi
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.dilapakTeal.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: AppColors.dilapakTeal.withOpacity(0.2)),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline_rounded,
+                            color: AppColors.dilapakTeal, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Kode OTP akan muncul di notifikasi HP Anda. '
+                            'Turunkan status bar untuk melihatnya.',
+                            style: GoogleFonts.plusJakartaSans(
+                                fontSize: 12,
+                                color: AppColors.dilapakTeal,
+                                height: 1.5),
                           ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  // Tombol kirim kode
                   GestureDetector(
-                    onTap: _kirimKode,
-                    child: Container(
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: AppColors.dilapakTeal,
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            // ignore: deprecated_member_use
-                            color: AppColors.dilapakTeal.withOpacity(0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.send_rounded,
-                            color: AppColors.white,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Kirim kode verifikasi',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.white,
+                    onTap: _isSendingCode ? null : _kirimKode,
+                    child: AnimatedOpacity(
+                      opacity: _isSendingCode ? 0.6 : 1.0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Container(
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: AppColors.dilapakTeal,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.dilapakTeal.withOpacity(0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _isSendingCode
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        color: Colors.white, strokeWidth: 2))
+                                : const Icon(Icons.notifications_active_rounded,
+                                    color: AppColors.white, size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                              _isSendingCode
+                                  ? 'Mengirim...'
+                                  : 'Kirim kode verifikasi',
+                              style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.white),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
+
                   Text(
                     'KODE VERIFIKASI (6 DIGIT)',
                     style: GoogleFonts.plusJakartaSans(
@@ -244,23 +408,24 @@ class _VerifikasiWhatsappScreenState extends State<VerifikasiWhatsappScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Belum menerima kode?',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      Text(
-                        _countdown > 0
-                            ? 'Kirim ulang (0:${_countdown.toString().padLeft(2, '0')})'
-                            : 'Kirim ulang',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: _countdown > 0
-                              ? AppColors.textMuted
-                              : AppColors.dilapakTeal,
+                      Text('Belum terima notifikasi?',
+                          style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12, color: AppColors.textSecondary)),
+                      GestureDetector(
+                        onTap: (_countdown == 0 && !_isSendingCode)
+                            ? _kirimKode
+                            : null,
+                        child: Text(
+                          _countdown > 0
+                              ? 'Kirim ulang (0:${_countdown.toString().padLeft(2, '0')})'
+                              : 'Kirim ulang',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _countdown > 0
+                                ? AppColors.textMuted
+                                : AppColors.dilapakTeal,
+                          ),
                         ),
                       ),
                     ],
@@ -269,8 +434,12 @@ class _VerifikasiWhatsappScreenState extends State<VerifikasiWhatsappScreen> {
               ),
             ),
             const SizedBox(height: 32),
+
+            // Tombol verifikasi utama
             GestureDetector(
-              onTap: (_otpLengkap && _kodeDikirim) ? _verifikasi : null,
+              onTap: (_otpLengkap && _kodeDikirim && !_isLoading)
+                  ? _verifikasi
+                  : null,
               child: AnimatedOpacity(
                 opacity: (_otpLengkap && _kodeDikirim) ? 1.0 : 0.5,
                 duration: const Duration(milliseconds: 200),
@@ -293,18 +462,12 @@ class _VerifikasiWhatsappScreenState extends State<VerifikasiWhatsappScreen> {
                             width: 22,
                             height: 22,
                             child: CircularProgressIndicator(
-                              color: AppColors.white,
-                              strokeWidth: 2.5,
-                            ),
-                          )
-                        : Text(
-                            'Verifikasi Sekarang',
+                                color: AppColors.white, strokeWidth: 2.5))
+                        : Text('Verifikasi Sekarang',
                             style: GoogleFonts.plusJakartaSans(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.white,
-                            ),
-                          ),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.white)),
                   ),
                 ),
               ),
@@ -331,14 +494,11 @@ class _VerifikasiWhatsappScreenState extends State<VerifikasiWhatsappScreen> {
                   icon: const Icon(Icons.arrow_back_rounded,
                       color: AppColors.textPrimary, size: 22),
                 ),
-                Text(
-                  'Verifikasi Akun',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
+                Text('Verifikasi Akun',
+                    style: GoogleFonts.plusJakartaSans(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary)),
               ],
             ),
           ),
@@ -347,6 +507,8 @@ class _VerifikasiWhatsappScreenState extends State<VerifikasiWhatsappScreen> {
     );
   }
 }
+
+// ─── WIDGET DESAIN ASLI SAMA PERSIS ───
 
 class _OtpInput extends StatelessWidget {
   final List<TextEditingController> controllers;
@@ -389,10 +551,9 @@ class _OtpInput extends StatelessWidget {
               obscuringCharacter: '●',
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: AppColors.dilapakTeal,
-              ),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.dilapakTeal),
               decoration: const InputDecoration(
                 border: InputBorder.none,
                 counterText: '',
@@ -409,7 +570,6 @@ class _OtpInput extends StatelessWidget {
 
 class _VerifCard extends StatelessWidget {
   final Widget child;
-
   const _VerifCard({required this.child});
 
   @override
