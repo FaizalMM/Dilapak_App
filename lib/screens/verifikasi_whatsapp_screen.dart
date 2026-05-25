@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:async';
 import '../theme/app_theme.dart';
 import '../database/database_helper.dart';
 import '../utils/session_manager.dart';
@@ -54,8 +55,12 @@ class _VerifikasiWhatsappScreenState extends State<VerifikasiWhatsappScreen> {
 
   @override
   void dispose() {
-    for (final c in _otpControllers) c.dispose();
-    for (final f in _focusNodes) f.dispose();
+    for (final c in _otpControllers) {
+      c.dispose();
+    }
+    for (final f in _focusNodes) {
+      f.dispose();
+    }
     super.dispose();
   }
 
@@ -168,22 +173,24 @@ class _VerifikasiWhatsappScreenState extends State<VerifikasiWhatsappScreen> {
       await DatabaseHelper.instance.updateUser(userId, {'is_verified_wa': 1});
       await SessionManager.instance.updateSession(isVerifiedWa: true);
 
-      // Hapus notifikasi OTP dari status bar setelah berhasil
-      await NotificationService.instance.hapusNotifikasiOTP();
-
-      // Simpan notifikasi ke tabel SQLite
-      await DatabaseHelper.instance.insertNotifikasi({
-        'user_id': userId,
-        'judul': 'Nomor HP Terverifikasi',
-        'isi': 'Nomor HP Anda telah berhasil diverifikasi. '
-            'Lanjutkan upload berkas identitas untuk aktivasi penuh.',
-        'tipe': 'sukses',
-        'is_read': 0,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-
       if (mounted) {
         setState(() => _isLoading = false);
+
+        // Hapus notifikasi OTP dan simpan notifikasi success di background (tidak perlu menunggu)
+        unawaited(Future.microtask(() async {
+          await NotificationService.instance.hapusNotifikasiOTP();
+          await DatabaseHelper.instance.insertNotifikasi({
+            'user_id': userId,
+            'judul': 'Nomor HP Terverifikasi',
+            'isi': 'Nomor HP Anda telah berhasil diverifikasi. '
+                'Lanjutkan upload berkas identitas untuk aktivasi penuh.',
+            'tipe': 'sukses',
+            'is_read': 0,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        }));
+
+        // Langsung navigasi ke screen berikutnya
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const VerifikasiBerkasScreen()),
         );
@@ -208,7 +215,9 @@ class _VerifikasiWhatsappScreenState extends State<VerifikasiWhatsappScreen> {
   }
 
   void _clearOtp() {
-    for (final c in _otpControllers) c.clear();
+    for (final c in _otpControllers) {
+      c.clear();
+    }
     _focusNodes[0].requestFocus();
     setState(() {});
   }

@@ -39,10 +39,12 @@ class SessionManager {
     final p = await SharedPreferences.getInstance();
     if (nama != null) await p.setString(_kNama, nama);
     if (isVerifiedWa != null) await p.setBool(_kIsVerifiedWa, isVerifiedWa);
-    if (isVerifiedBerkas != null)
+    if (isVerifiedBerkas != null) {
       await p.setBool(_kIsVerifiedBerkas, isVerifiedBerkas);
-    if (isProfilLengkap != null)
+    }
+    if (isProfilLengkap != null) {
       await p.setBool(_kIsProfilLengkap, isProfilLengkap);
+    }
   }
 
   Future<bool> isLoggedIn() async {

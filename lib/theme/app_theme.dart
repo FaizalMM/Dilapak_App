@@ -3,13 +3,15 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
   // Splash / Dilapak brand
-  static const Color dilapakTeal = Color(0xFF2BBDB4);
-  static const Color dilapakBackground = Color(0xFFEEF3F9);
+  static const Color dilapakTeal = Color(0xFF14B8A6);
+  static const Color dilapakTealLight = Color(0xFFE6F7F5);
+  static const Color dilapakBackground = Color(0xFFF4F6FA);
 
   // Green theme (Register/Kependudukan)
   static const Color greenPrimary = Color(0xFF1A6B55);
   static const Color greenDark = Color(0xFF145244);
   static const Color greenAccent = Color(0xFF2ECC8E);
+  static const Color greenLight = Color(0xFFF0FAF7);
 
   // Blue theme (Onboarding / Login)
   static const Color bluePrimary = Color(0xFF1A4FA0);

@@ -27,11 +27,12 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
     final userId = await SessionManager.instance.getUserId();
     if (userId == null) return;
     final list = await DatabaseHelper.instance.getNotifikasiByUser(userId);
-    if (mounted)
+    if (mounted) {
       setState(() {
         _allNotif = list;
         _isLoading = false;
       });
+    }
   }
 
   List<Map<String, dynamic>> get _filtered {

@@ -22,7 +22,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Layanan Publik dalam\nGenggaman',
       description:
           'Urus berbagai dokumen kependudukan dan layanan publik lainnya dengan mudah, cepat, dan aman langsung dari perangkat Anda.',
-      primaryColor: const Color(0xFF2BBDB4),
+      primaryColor: AppColors.dilapakTeal,
       backgroundColor: AppColors.white,
     ),
     OnboardingData(
@@ -31,7 +31,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       description:
           'Mulai dari urusan kependudukan hingga perizinan, semua bisa diakses dari satu aplikasi.',
       primaryColor: AppColors.bluePrimary,
-      backgroundColor: const Color(0xFFF0F4FA),
+      backgroundColor: AppColors.blueLight,
     ),
     OnboardingData(
       type: OnboardingType.featureIcons,
@@ -39,7 +39,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       description:
           'Pantau status permohonan Anda secara real-time kapan saja dan di mana saja.',
       primaryColor: AppColors.bluePrimary,
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: AppColors.dilapakBackground,
     ),
   ];
 
@@ -426,13 +426,13 @@ class _IllustrationWidget extends StatelessWidget {
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2BBDB4).withOpacity(0.15),
+                          color: AppColors.dilapakTeal.withOpacity(0.15),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
                           Icons.phone_android_rounded,
                           size: 40,
-                          color: Color(0xFF2BBDB4),
+                          color: AppColors.dilapakTeal,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -442,7 +442,7 @@ class _IllustrationWidget extends StatelessWidget {
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF2BBDB4),
+                          color: AppColors.dilapakTeal,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(

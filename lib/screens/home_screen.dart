@@ -61,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Scaffold(
-        backgroundColor: Color(0xFFF4F6FA),
+        backgroundColor: AppColors.dilapakBackground,
         body: Center(child: CircularProgressIndicator()),
       );
     }
@@ -69,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final isVerified = _isVerifiedWa && _isVerifiedBerkas;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: AppColors.dilapakBackground,
       appBar: _currentIndex == 0 ? null : _buildAppBar(),
       body: IndexedStack(
         index: _currentIndex,
@@ -93,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: AppColors.dilapakBackground,
       elevation: 0,
       scrolledUnderElevation: 0,
       systemOverlayStyle: const SystemUiOverlayStyle(
@@ -639,7 +639,7 @@ class _VerifiedBannerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFE6F7F5),
+        color: AppColors.dilapakTealLight,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppColors.dilapakTeal.withOpacity(0.3)),
       ),
@@ -1085,7 +1085,7 @@ class _LayananUtamaSheet extends StatelessWidget {
           _SheetLayananCard(
             icon: Icons.document_scanner_outlined,
             iconColor: AppColors.dilapakTeal,
-            iconBackground: const Color(0xFFE6F7F5),
+            iconBackground: AppColors.dilapakTealLight,
             title: 'Tambah Permohonan',
             description:
                 'Permohonan pembuatan/penerbitan 1 jenis layanan dokumen kependudukan.',
@@ -1411,7 +1411,6 @@ class _BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPad = MediaQuery.of(context).padding.bottom;
 
     return Container(
       decoration: BoxDecoration(

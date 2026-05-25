@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -136,7 +137,7 @@ class _VerifikasiBerkasScreenState extends State<VerifikasiBerkasScreen> {
         return;
       }
 
-      // Simpan path file + update status ke SQLite
+      // Update status utama ke SQLite (must await)
       await DatabaseHelper.instance.updateUser(userId, {
         'foto_ktp': _fileKTP!.path,
         'foto_swafoto': _fileSwafoto!.path,
@@ -145,37 +146,38 @@ class _VerifikasiBerkasScreenState extends State<VerifikasiBerkasScreen> {
       });
       await SessionManager.instance.updateSession(isVerifiedBerkas: true);
 
-      // Simpan entry ke tabel berkas
-      await DatabaseHelper.instance.insertBerkas({
-        'user_id': userId,
-        'nama_berkas': 'Foto KTP',
-        'tipe_berkas': 'ktp',
-        'path_file': _fileKTP!.path,
-        'status': 'menunggu',
-        'created_at': DateTime.now().toIso8601String(),
-      });
-      await DatabaseHelper.instance.insertBerkas({
-        'user_id': userId,
-        'nama_berkas': 'Swafoto dengan KTP',
-        'tipe_berkas': 'swafoto',
-        'path_file': _fileSwafoto!.path,
-        'status': 'menunggu',
-        'created_at': DateTime.now().toIso8601String(),
-      });
-
-      // Notifikasi ke tabel SQLite
-      await DatabaseHelper.instance.insertNotifikasi({
-        'user_id': userId,
-        'judul': 'Berkas Dikirim untuk Verifikasi',
-        'isi': 'KTP dan swafoto Anda sedang ditinjau. '
-            'Lengkapi data profil untuk aktivasi penuh.',
-        'tipe': 'info',
-        'is_read': 0,
-        'created_at': DateTime.now().toIso8601String(),
-      });
-
       if (mounted) {
         setState(() => _isLoading = false);
+
+        // Simpan entry berkas dan notifikasi di background (tidak perlu menunggu)
+        unawaited(Future.microtask(() async {
+          await DatabaseHelper.instance.insertBerkas({
+            'user_id': userId,
+            'nama_berkas': 'Foto KTP',
+            'tipe_berkas': 'ktp',
+            'path_file': _fileKTP!.path,
+            'status': 'menunggu',
+            'created_at': DateTime.now().toIso8601String(),
+          });
+          await DatabaseHelper.instance.insertBerkas({
+            'user_id': userId,
+            'nama_berkas': 'Swafoto dengan KTP',
+            'tipe_berkas': 'swafoto',
+            'path_file': _fileSwafoto!.path,
+            'status': 'menunggu',
+            'created_at': DateTime.now().toIso8601String(),
+          });
+          await DatabaseHelper.instance.insertNotifikasi({
+            'user_id': userId,
+            'judul': 'Berkas Dikirim untuk Verifikasi',
+            'isi': 'KTP dan swafoto Anda sedang ditinjau. '
+                'Lengkapi data profil untuk aktivasi penuh.',
+            'tipe': 'info',
+            'is_read': 0,
+            'created_at': DateTime.now().toIso8601String(),
+          });
+        }));
+
         _showSuccessDialog();
       }
     } catch (e) {

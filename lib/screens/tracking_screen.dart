@@ -54,12 +54,13 @@ class _TrackingScreenState extends State<TrackingScreen> {
         await DatabaseHelper.instance.getPermohonanById(widget.permohonanId);
     final t = await DatabaseHelper.instance
         .getTrackingByPermohonan(widget.permohonanId);
-    if (mounted)
+    if (mounted) {
       setState(() {
         _permohonan = p;
         _tracking = t;
         _isLoading = false;
       });
+    }
   }
 
   Color get _accentColor {
@@ -81,9 +82,9 @@ class _TrackingScreenState extends State<TrackingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FA),
+      backgroundColor: AppColors.dilapakBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F6FA),
+        backgroundColor: AppColors.dilapakBackground,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
