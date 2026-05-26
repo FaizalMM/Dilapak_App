@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../database/database_helper.dart';
 import '../utils/session_manager.dart';
-import 'tracking_screen.dart';
+import 'detail_permohonan_screen.dart';
 
 class DaftarPermohonanScreen extends StatefulWidget {
   const DaftarPermohonanScreen({super.key});
@@ -222,7 +222,7 @@ class _DaftarPermohonanScreenState extends State<DaftarPermohonanScreen>
                 context,
                 MaterialPageRoute(
                   builder: (_) =>
-                      TrackingScreen(permohonanId: items[index]['id']),
+                      DetailPermohonanScreen(permohonanId: items[index]['id']),
                 ),
               );
               // Auto refresh setelah kembali dari halaman tracking

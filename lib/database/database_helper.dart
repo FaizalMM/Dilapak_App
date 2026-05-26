@@ -380,6 +380,12 @@ class DatabaseHelper {
     return res.isNotEmpty ? res.first : null;
   }
 
+  Future<int> updatePermohonan(int id, Map<String, dynamic> data) async {
+    final db = await database;
+    return await db
+        .update('permohonan', data, where: 'id = ?', whereArgs: [id]);
+  }
+
   // ═══════════ NOTIFIKASI ═══════════
 
   Future<List<Map<String, dynamic>>> getNotifikasiByUser(int userId) async {
