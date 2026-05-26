@@ -21,8 +21,6 @@ class DatabaseHelper {
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // Perbaiki permohonan lama: jika status 'menunggu' tapi belum ada berkas,
-      // kembalikan ke 'baru' supaya user bisa lanjut upload berkas
       final rows = await db.rawQuery('''
         SELECT p.id FROM permohonan p
         WHERE p.status = 'menunggu'
@@ -189,7 +187,7 @@ class DatabaseHelper {
       },
       {
         'kode': 'KK-001',
-        'nama': 'Penerbitan KK Baru',
+        'nama': 'Penerbitan KK',
         'kategori': 'Kartu Keluarga',
         'deskripsi': 'Pembuatan Kartu Keluarga baru',
         'syarat': 'Surat nikah, KTP kedua orang tua, Surat pengantar',
@@ -212,68 +210,20 @@ class DatabaseHelper {
         'estimasi_hari': 5
       },
       {
-        'kode': 'AK-001',
-        'nama': 'Akta Kelahiran Baru',
-        'kategori': 'Pencatatan Sipil',
-        'deskripsi': 'Penerbitan akta kelahiran',
-        'syarat': 'Surat keterangan lahir, KK, KTP orang tua, Buku nikah',
-        'estimasi_hari': 7
-      },
-      {
-        'kode': 'AK-002',
-        'nama': 'Akta Kelahiran Hilang',
-        'kategori': 'Pencatatan Sipil',
-        'deskripsi': 'Penggantian akta kelahiran yang hilang',
-        'syarat': 'Surat kehilangan dari polisi, Fotokopi akta lama',
-        'estimasi_hari': 5
-      },
-      {
         'kode': 'AK-003',
-        'nama': 'Akta Perkawinan',
+        'nama': 'Penerbitan Akta Perkawinan',
         'kategori': 'Pencatatan Sipil',
         'deskripsi': 'Penerbitan akta perkawinan',
         'syarat': 'Surat nikah dari KUA/gereja, KTP, KK',
         'estimasi_hari': 7
       },
       {
-        'kode': 'AK-004',
-        'nama': 'Akta Kematian',
-        'kategori': 'Pencatatan Sipil',
-        'deskripsi': 'Penerbitan akta kematian',
-        'syarat': 'Surat keterangan kematian, KK, KTP almarhum',
-        'estimasi_hari': 3
-      },
-      {
         'kode': 'KIA-001',
-        'nama': 'Kartu Identitas Anak (KIA)',
+        'nama': 'KIA (Kartu Identitas Anak) WNI',
         'kategori': 'KIA',
         'deskripsi': 'Penerbitan KIA usia 0-17 tahun',
         'syarat': 'Akta kelahiran, KK, KTP orang tua',
         'estimasi_hari': 3
-      },
-      {
-        'kode': 'PD-001',
-        'nama': 'Surat Keterangan Pindah WNI',
-        'kategori': 'Pindah Datang',
-        'deskripsi': 'Surat keterangan pindah dalam negeri',
-        'syarat': 'KK, KTP, Surat pengantar RT/RW',
-        'estimasi_hari': 3
-      },
-      {
-        'kode': 'PD-002',
-        'nama': 'Surat Keterangan Pindah Masuk',
-        'kategori': 'Pindah Datang',
-        'deskripsi': 'Surat keterangan pindah masuk ke Kota Madiun',
-        'syarat': 'Surat keterangan pindah dari daerah asal, KK, KTP',
-        'estimasi_hari': 5
-      },
-      {
-        'kode': 'SKD-001',
-        'nama': 'Surat Keterangan Domisili',
-        'kategori': 'Surat Keterangan',
-        'deskripsi': 'Surat keterangan tempat tinggal/domisili',
-        'syarat': 'KTP, KK, Surat pengantar RT/RW',
-        'estimasi_hari': 2
       },
       // ── KTP TAMBAHAN ─────────────────────────────────────
       {
