@@ -441,6 +441,28 @@ class DatabaseHelper {
         orderBy: 'created_at DESC');
   }
 
+  /// Menandai tracking step upload (urutan=1) sebagai selesai
+  Future<void> markTrackingUploadDone(int permohonanId) async {
+    final db = await database;
+    await db.update(
+      'tracking',
+      {'is_done': 1, 'waktu': DateTime.now().toIso8601String()},
+      where: 'permohonan_id = ? AND urutan = ?',
+      whereArgs: [permohonanId, 1],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getBerkasByPermohonan(
+      int permohonanId) async {
+    final db = await database;
+    return await db.query(
+      'berkas',
+      where: 'permohonan_id = ?',
+      whereArgs: [permohonanId],
+      orderBy: 'created_at ASC',
+    );
+  }
+
   Future<int> updateBerkas(int id, Map<String, dynamic> data) async {
     final db = await database;
     return await db.update('berkas', data, where: 'id = ?', whereArgs: [id]);

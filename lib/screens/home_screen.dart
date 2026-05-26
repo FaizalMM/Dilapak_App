@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -433,9 +434,24 @@ class _StepIndicator extends StatelessWidget {
 // ─────────────────────────────────────────────
 // VERIFIED DASHBOARD
 // ─────────────────────────────────────────────
-class _VerifiedDashboard extends StatelessWidget {
+class _VerifiedDashboard extends StatefulWidget {
   final ValueChanged<int> onSwitchTab;
   const _VerifiedDashboard({required this.onSwitchTab});
+
+  @override
+  State<_VerifiedDashboard> createState() => _VerifiedDashboardState();
+}
+
+class _VerifiedDashboardState extends State<_VerifiedDashboard> {
+  // Gunakan key untuk memaksa rebuild _PermohonanRecentList saat pull-to-refresh
+  Key _listKey = UniqueKey();
+
+  Future<void> _onRefresh() async {
+    if (!mounted) return;
+    setState(() {
+      _listKey = UniqueKey();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -446,41 +462,46 @@ class _VerifiedDashboard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _TealAppBar(onNotifTap: () => onSwitchTab(2)),
+          _TealAppBar(onNotifTap: () => widget.onSwitchTab(2)),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 16),
-                  const _VerifiedBannerCard(),
-                  const SizedBox(height: 24),
-                  const _LayananUtamaTappableTitle(),
-                  const SizedBox(height: 12),
-                  const _LayananUtamaRow(isVerified: true),
-                  const SizedBox(height: 24),
-                  const _SectionTitle(title: 'Kategori Layanan'),
-                  const SizedBox(height: 12),
-                  const _KategoriLayanan(),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const _SectionTitle(title: 'Permohonan Terbaru'),
-                      GestureDetector(
-                        onTap: () => onSwitchTab(1),
-                        child: Text('Lihat Semua',
-                            style: GoogleFonts.plusJakartaSans(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.dilapakTeal)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const _PermohonanRecentList(),
-                ],
+            child: RefreshIndicator(
+              onRefresh: _onRefresh,
+              color: AppColors.dilapakTeal,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    const _VerifiedBannerCard(),
+                    const SizedBox(height: 24),
+                    const _LayananUtamaTappableTitle(),
+                    const SizedBox(height: 12),
+                    const _LayananUtamaRow(isVerified: true),
+                    const SizedBox(height: 24),
+                    const _SectionTitle(title: 'Kategori Layanan'),
+                    const SizedBox(height: 12),
+                    const _KategoriLayanan(),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const _SectionTitle(title: 'Permohonan Terbaru'),
+                        GestureDetector(
+                          onTap: () => widget.onSwitchTab(1),
+                          child: Text('Lihat Semua',
+                              style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.dilapakTeal)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _PermohonanRecentList(key: _listKey),
+                  ],
+                ),
               ),
             ),
           ),
@@ -865,18 +886,26 @@ class _KategoriCard extends StatelessWidget {
 }
 
 class _PermohonanRecentList extends StatefulWidget {
-  const _PermohonanRecentList();
+  const _PermohonanRecentList({super.key});
   @override
   State<_PermohonanRecentList> createState() => _PermohonanRecentListState();
 }
 
 class _PermohonanRecentListState extends State<_PermohonanRecentList> {
   List<Map<String, dynamic>> _list = [];
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -1244,10 +1273,11 @@ class _ProfilPlaceholderState extends State<_ProfilPlaceholder> {
           ),
           TextButton(
             onPressed: () async {
+              final navigator = Navigator.of(context);
               Navigator.pop(ctx);
               await SessionManager.instance.clearSession();
               if (!mounted) return;
-              Navigator.of(context).pushAndRemoveUntil(
+              navigator.pushAndRemoveUntil(
                 PageRouteBuilder(
                   pageBuilder: (_, __, ___) => const LoginScreen(),
                   transitionsBuilder: (_, animation, __, child) =>
@@ -1371,11 +1401,6 @@ class _ProfileTile extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────
-// BOTTOM NAV — Pill / Bubble style
-// Tab aktif: icon + label di dalam pill berwarna
-// Tab inaktif: icon + label tanpa background
-// ─────────────────────────────────────────────
 class _NavItem {
   final IconData icon;
   final IconData activeIcon;
@@ -1411,7 +1436,6 @@ class _BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,

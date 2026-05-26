@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
@@ -12,6 +13,7 @@ class NotifikasiScreen extends StatefulWidget {
 }
 
 class _NotifikasiScreenState extends State<NotifikasiScreen> {
+  Timer? _timer;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   List<Map<String, dynamic>> _allNotif = [];
@@ -20,6 +22,13 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
   @override
   void initState() {
     super.initState();
+    _loadData();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _loadData());
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _loadData();
   }
 
@@ -47,6 +56,7 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
 
   @override
   void dispose() {
+    _timer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -101,16 +111,32 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
   Widget _buildList() {
     final items = _filtered;
     if (items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      return RefreshIndicator(
+        onRefresh: _loadData,
+        color: AppColors.dilapakTeal,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            Icon(Icons.notifications_off_outlined,
-                size: 48, color: AppColors.textMuted.withOpacity(0.5)),
-            const SizedBox(height: 12),
-            Text('Tidak ada notifikasi',
-                style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14, color: AppColors.textMuted)),
+            SizedBox(
+              height: 300,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.notifications_off_outlined,
+                        size: 48, color: AppColors.textMuted.withOpacity(0.5)),
+                    const SizedBox(height: 12),
+                    Text('Tidak ada notifikasi',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14, color: AppColors.textMuted)),
+                    const SizedBox(height: 8),
+                    Text('Tarik ke bawah untuk memperbarui',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12, color: AppColors.textMuted)),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       );
@@ -120,6 +146,7 @@ class _NotifikasiScreenState extends State<NotifikasiScreen> {
       onRefresh: _loadData,
       color: AppColors.dilapakTeal,
       child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
         itemCount: items.length,
         itemBuilder: (context, index) => _NotifikasiTile(

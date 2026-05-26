@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
@@ -18,6 +19,7 @@ class _DaftarPermohonanScreenState extends State<DaftarPermohonanScreen>
   @override
   bool get wantKeepAlive => false; // false = selalu reload saat kembali ke tab
 
+  Timer? _timer;
   String? _selectedFilter;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -29,12 +31,13 @@ class _DaftarPermohonanScreenState extends State<DaftarPermohonanScreen>
   void initState() {
     super.initState();
     _loadData();
+    // Auto refresh setiap 30 detik
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _loadData());
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Auto refresh setiap kali tab ini aktif/kembali ke foreground
     _loadData();
   }
 
@@ -74,6 +77,7 @@ class _DaftarPermohonanScreenState extends State<DaftarPermohonanScreen>
 
   @override
   void dispose() {
+    _timer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -191,22 +195,37 @@ class _DaftarPermohonanScreenState extends State<DaftarPermohonanScreen>
   Widget _buildList() {
     final items = _filtered;
     if (items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      return RefreshIndicator(
+        onRefresh: _loadData,
+        color: AppColors.dilapakTeal,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           children: [
-            Icon(Icons.inbox_outlined,
-                size: 48, color: AppColors.textMuted.withOpacity(0.5)),
-            const SizedBox(height: 12),
-            Text('Tidak ada permohonan',
-                style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14, color: AppColors.textMuted)),
+            SizedBox(
+              height: 300,
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.inbox_outlined,
+                        size: 48, color: AppColors.textMuted.withOpacity(0.5)),
+                    const SizedBox(height: 12),
+                    Text('Tidak ada permohonan',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14, color: AppColors.textMuted)),
+                    const SizedBox(height: 8),
+                    Text('Tarik ke bawah untuk memperbarui',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12, color: AppColors.textMuted)),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       );
     }
 
-    // RefreshIndicator: pull-to-refresh untuk muat ulang dari SQLite
     return RefreshIndicator(
       onRefresh: _loadData,
       color: AppColors.dilapakTeal,

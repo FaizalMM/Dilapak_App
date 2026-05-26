@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
 import '../database/database_helper.dart';
 import '../utils/session_manager.dart';
+import 'status_permohonan_screen.dart';
 
 // ─── MODEL BERKAS ───
 
@@ -439,6 +440,9 @@ class _UploadBerkasScreenState extends State<UploadBerkasScreen> {
         {'status': 'menunggu'},
       );
 
+      // Update tracking step 1 (upload berkas) sebagai selesai
+      await DatabaseHelper.instance.markTrackingUploadDone(widget.permohonanId);
+
       if (!mounted) return;
       setState(() => _isSubmitting = false);
 
@@ -447,6 +451,7 @@ class _UploadBerkasScreenState extends State<UploadBerkasScreen> {
         MaterialPageRoute(
           builder: (_) => _SelesaiScreen(
             nomorResi: widget.permohonanData['nomor_resi']?.toString() ?? '-',
+            permohonanId: widget.permohonanId,
           ),
         ),
       );
@@ -1178,7 +1183,8 @@ class _PickFileButton extends StatelessWidget {
 
 class _SelesaiScreen extends StatelessWidget {
   final String nomorResi;
-  const _SelesaiScreen({required this.nomorResi});
+  final int permohonanId;
+  const _SelesaiScreen({required this.nomorResi, required this.permohonanId});
 
   @override
   Widget build(BuildContext context) {
@@ -1356,8 +1362,16 @@ class _SelesaiScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: () =>
-                      Navigator.popUntil(context, (route) => route.isFirst),
+                  onPressed: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            StatusPermohonanScreen(permohonanId: permohonanId),
+                      ),
+                      (route) => route.isFirst,
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.dilapakTeal,
                     foregroundColor: Colors.white,

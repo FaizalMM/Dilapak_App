@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../database/database_helper.dart';
 import 'upload_berkas_screen.dart';
+import 'status_permohonan_screen.dart';
 
 class DetailPermohonanScreen extends StatefulWidget {
   final int permohonanId;
@@ -69,7 +70,15 @@ class _DetailPermohonanScreenState extends State<DetailPermohonanScreen> {
 
   bool get _canProceedToUpload {
     final status = _permohonan?['status']?.toString() ?? '';
-    return status == 'baru' || status == 'menunggu';
+    return status == 'baru';
+  }
+
+  bool get _sudahUpload {
+    final status = _permohonan?['status']?.toString() ?? '';
+    return status == 'menunggu' ||
+        status == 'diproses' ||
+        status == 'selesai' ||
+        status == 'ditolak';
   }
 
   @override
@@ -100,7 +109,6 @@ class _DetailPermohonanScreenState extends State<DetailPermohonanScreen> {
                               const SizedBox(height: 16),
                               _buildDetailLayananSection(),
                               const SizedBox(height: 20),
-                              _buildStepIndicator(),
                               const SizedBox(height: 32),
                             ],
                           ),
@@ -140,98 +148,191 @@ class _DetailPermohonanScreenState extends State<DetailPermohonanScreen> {
   }
 
   Widget _buildStatusBanner() {
-    final status = _permohonan!['status']?.toString() ?? 'menunggu';
+    final status = _permohonan!['status']?.toString() ?? 'baru';
     final tanggal = _permohonan!['tanggal_pengajuan']?.toString();
     final formattedDate = _formatDate(tanggal);
+    final isSudahUpload = status == 'menunggu' ||
+        status == 'diproses' ||
+        status == 'selesai' ||
+        status == 'ditolak';
 
-    return Container(
+    // Warna & label
+    Color bannerColor;
+    String statusText;
+    if (status == 'menunggu') {
+      bannerColor = AppColors.dilapakTeal;
+      statusText = 'Sedang Diverifikasi';
+    } else if (status == 'diproses') {
+      bannerColor = const Color(0xFFF59E0B);
+      statusText = 'Sedang Diproses';
+    } else if (status == 'selesai') {
+      bannerColor = const Color(0xFF10B981);
+      statusText = 'Selesai';
+    } else if (status == 'ditolak') {
+      bannerColor = const Color(0xFFEF4444);
+      statusText = 'Ditolak';
+    } else {
+      bannerColor = AppColors.dilapakTeal;
+      statusText = _statusLabel(status);
+    }
+
+    final bannerWidget = Container(
       width: double.infinity,
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.dilapakTeal,
+        color: bannerColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.dilapakTeal.withOpacity(0.3),
+            color: bannerColor.withOpacity(0.3),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'STATUS PENGAJUAN',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white.withOpacity(0.75),
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
+                    Text(
+                      'STATUS PENGAJUAN',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withOpacity(0.75),
+                        letterSpacing: 0.8,
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        _statusLabel(status),
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            statusText,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                'DIBUAT PADA',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white.withOpacity(0.75),
-                  letterSpacing: 0.8,
-                ),
               ),
-              const SizedBox(height: 4),
-              ...formattedDate.split('\n').map(
-                    (line) => Text(
-                      line,
-                      textAlign: TextAlign.right,
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'DIBUAT PADA',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withOpacity(0.75),
+                      letterSpacing: 0.8,
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  ...formattedDate.split('\n').map(
+                        (line) => Text(
+                          line,
+                          textAlign: TextAlign.right,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                ],
+              ),
             ],
           ),
+
+          // Progress bar & deskripsi saat sudah upload
+          if (isSudahUpload) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: status == 'selesai' ? 1.0 : 0.45,
+                backgroundColor: Colors.white.withOpacity(0.25),
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                minHeight: 4,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              status == 'selesai'
+                  ? 'Dokumen Anda sudah siap diambil.'
+                  : status == 'ditolak'
+                      ? 'Permohonan Anda ditolak. Hubungi petugas.'
+                      : 'Permohonan Anda sedang dalam antrean verifikasi petugas.',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: Colors.white.withOpacity(0.88),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Lihat detail status',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.arrow_forward_ios_rounded,
+                      size: 12, color: Colors.white),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
+
+    // Jika sudah upload, bungkus dengan GestureDetector → StatusPermohonanScreen
+    if (isSudahUpload) {
+      return GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  StatusPermohonanScreen(permohonanId: widget.permohonanId),
+            ),
+          );
+        },
+        child: bannerWidget,
+      );
+    }
+    return bannerWidget;
   }
 
   Widget _buildDataPemohonSection() {
@@ -629,49 +730,6 @@ class _DetailPermohonanScreenState extends State<DetailPermohonanScreen> {
     );
   }
 
-  Widget _buildStepIndicator() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 3)),
-          ],
-        ),
-        child: const Row(
-          children: [
-            _StepCircle(
-              number: 1,
-              label: 'INPUT',
-              isActive: true,
-              isDone: true,
-            ),
-            _StepLine(isActive: false),
-            _StepCircle(
-              number: 2,
-              label: 'VERIFIKASI',
-              isActive: false,
-              isDone: false,
-            ),
-            _StepLine(isActive: false),
-            _StepCircle(
-              number: 3,
-              label: 'SELESAI',
-              isActive: false,
-              isDone: false,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildBottomActions(BuildContext context) {
     final bottom = MediaQuery.of(context).padding.bottom;
     return Container(
@@ -688,7 +746,8 @@ class _DetailPermohonanScreenState extends State<DetailPermohonanScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (_canProceedToUpload)
+          // Sudah upload → tampilkan tombol Lihat Status saja
+          if (_sudahUpload) ...[
             SizedBox(
               width: double.infinity,
               height: 52,
@@ -697,17 +756,14 @@ class _DetailPermohonanScreenState extends State<DetailPermohonanScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => UploadBerkasScreen(
-                        permohonanId: widget.permohonanId,
-                        permohonanData: _permohonan!,
-                        layananData: _layanan,
-                      ),
+                      builder: (_) => StatusPermohonanScreen(
+                          permohonanId: widget.permohonanId),
                     ),
                   );
                 },
-                icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                icon: const Icon(Icons.track_changes_rounded, size: 18),
                 label: Text(
-                  'Lanjutkan Proses',
+                  'Lihat Status Permohonan',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -722,26 +778,63 @@ class _DetailPermohonanScreenState extends State<DetailPermohonanScreen> {
                 ),
               ),
             ),
-          const SizedBox(height: 12),
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.home_outlined,
-                    size: 16, color: AppColors.textSecondary),
-                const SizedBox(width: 6),
-                Text(
-                  'Kembali ke Beranda',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textSecondary,
+          ] else ...[
+            // Belum upload → tampilkan Lanjutkan Proses + Kembali ke Beranda
+            if (_canProceedToUpload)
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => UploadBerkasScreen(
+                          permohonanId: widget.permohonanId,
+                          permohonanData: _permohonan!,
+                          layananData: _layanan,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+                  label: Text(
+                    'Lanjutkan Proses',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.dilapakTeal,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                    elevation: 0,
                   ),
                 ),
-              ],
+              ),
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.home_outlined,
+                      size: 16, color: AppColors.textSecondary),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Kembali ke Beranda',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -787,86 +880,5 @@ class _DetailPermohonanScreenState extends State<DetailPermohonanScreen> {
       default:
         return 'Menunggu Verifikasi';
     }
-  }
-}
-
-class _StepCircle extends StatelessWidget {
-  final int number;
-  final String label;
-  final bool isActive;
-  final bool isDone;
-  const _StepCircle({
-    required this.number,
-    required this.label,
-    required this.isActive,
-    required this.isDone,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isDone
-                ? AppColors.dilapakTeal
-                : isActive
-                    ? AppColors.dilapakTeal.withOpacity(0.15)
-                    : AppColors.white,
-            border: Border.all(
-              color: isDone || isActive
-                  ? AppColors.dilapakTeal
-                  : AppColors.borderColor,
-              width: 1.5,
-            ),
-          ),
-          child: isDone
-              ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
-              : Center(
-                  child: Text(
-                    '$number',
-                    style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: isActive
-                          ? AppColors.dilapakTeal
-                          : AppColors.textMuted,
-                    ),
-                  ),
-                ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 10,
-            fontWeight: isDone || isActive ? FontWeight.w700 : FontWeight.w500,
-            color: isDone || isActive
-                ? AppColors.dilapakTeal
-                : AppColors.textMuted,
-            letterSpacing: 0.3,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StepLine extends StatelessWidget {
-  final bool isActive;
-  const _StepLine({required this.isActive});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        height: 1.5,
-        margin: const EdgeInsets.only(bottom: 20),
-        color: isActive ? AppColors.dilapakTeal : AppColors.borderColor,
-      ),
-    );
   }
 }
