@@ -155,7 +155,7 @@ class _Tiga1FormScreenState extends State<Tiga1FormScreen> {
           'alamat': _alamatController.text.trim(),
           'rt': _rtController.text.trim(),
           'rw': _rwController.text.trim(),
-          'status': 'menunggu',
+          'status': 'baru',
           'catatan': _keteranganController.text.trim(),
           'tanggal_pengajuan': DateTime.now().toIso8601String(),
         });

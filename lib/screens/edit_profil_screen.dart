@@ -455,26 +455,62 @@ class _EditableField extends StatelessWidget {
   }
 }
 
-class _EditableFieldSimple extends StatelessWidget {
+class _EditableFieldSimple extends StatefulWidget {
   final String label;
   final String value;
   final ValueChanged<String> onChanged;
   const _EditableFieldSimple(
       {required this.label, required this.value, required this.onChanged});
+
+  @override
+  State<_EditableFieldSimple> createState() => _EditableFieldSimpleState();
+}
+
+class _EditableFieldSimpleState extends State<_EditableFieldSimple> {
+  late TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value);
+    // Taruh cursor di akhir teks
+    _controller.selection = TextSelection.collapsed(
+      offset: _controller.text.length,
+    );
+  }
+
+  @override
+  void didUpdateWidget(_EditableFieldSimple oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Hanya update jika value berubah dari luar (bukan dari user mengetik)
+    if (oldWidget.value != widget.value && _controller.text != widget.value) {
+      _controller.value = TextEditingValue(
+        text: widget.value,
+        selection: TextSelection.collapsed(offset: widget.value.length),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label,
+        Text(widget.label,
             style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary)),
         const SizedBox(height: 6),
         TextField(
-          controller: TextEditingController(text: value),
-          onChanged: onChanged,
+          controller: _controller,
+          onChanged: widget.onChanged,
           style: GoogleFonts.plusJakartaSans(
               fontSize: 13.5, color: AppColors.textPrimary),
           decoration: InputDecoration(

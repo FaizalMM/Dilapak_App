@@ -149,7 +149,7 @@ class _TambahPermohonanScreenState extends State<TambahPermohonanScreen> {
         'alamat': _alamatController.text.trim(),
         'rt': _rtController.text.trim(),
         'rw': _rwController.text.trim(),
-        'status': 'menunggu',
+        'status': 'baru',
         'catatan': _keteranganController.text.trim(),
         'tanggal_pengajuan': DateTime.now().toIso8601String(),
       });

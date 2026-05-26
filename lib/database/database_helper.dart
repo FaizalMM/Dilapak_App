@@ -15,7 +15,30 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    return await openDatabase(path,
+        version: 2, onCreate: _createDB, onUpgrade: _onUpgrade);
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Perbaiki permohonan lama: jika status 'menunggu' tapi belum ada berkas,
+      // kembalikan ke 'baru' supaya user bisa lanjut upload berkas
+      final rows = await db.rawQuery('''
+        SELECT p.id FROM permohonan p
+        WHERE p.status = 'menunggu'
+        AND NOT EXISTS (
+          SELECT 1 FROM berkas b WHERE b.permohonan_id = p.id
+        )
+      ''');
+      for (final row in rows) {
+        await db.update(
+          'permohonan',
+          {'status': 'baru'},
+          where: 'id = ?',
+          whereArgs: [row['id']],
+        );
+      }
+    }
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -74,7 +97,7 @@ class DatabaseHelper {
         alamat TEXT,
         rt TEXT,
         rw TEXT,
-        status TEXT DEFAULT 'menunggu',
+        status TEXT DEFAULT 'baru',
         catatan TEXT,
         tanggal_pengajuan TEXT DEFAULT CURRENT_TIMESTAMP,
         tanggal_selesai TEXT,
@@ -252,6 +275,221 @@ class DatabaseHelper {
         'syarat': 'KTP, KK, Surat pengantar RT/RW',
         'estimasi_hari': 2
       },
+      // ── KTP TAMBAHAN ─────────────────────────────────────
+      {
+        'kode': 'KTP-005',
+        'nama': 'KTP-el Pindah Datang Bagi WNI Dari Luar Negeri',
+        'kategori': 'Kependudukan',
+        'deskripsi':
+            'Penerbitan KTP-el bagi WNI yang baru pindah datang dari luar negeri',
+        'syarat': 'Paspor, SKPLN/SPLP, KK, Surat datang dari kedutaan',
+        'estimasi_hari': 7
+      },
+      {
+        'kode': 'KTP-006',
+        'nama': 'KTP-el Pindah Datang WNA Dengan ITAP',
+        'kategori': 'Kependudukan',
+        'deskripsi':
+            'Penerbitan KTP-el bagi WNA pemegang ITAP yang pindah datang',
+        'syarat': 'Paspor, ITAP, Surat pindah datang dari instansi imigrasi',
+        'estimasi_hari': 7
+      },
+      {
+        'kode': 'KTP-007',
+        'nama': 'KTP-el Perpanjangan WNA Dengan ITAP',
+        'kategori': 'Kependudukan',
+        'deskripsi': 'Perpanjangan KTP-el bagi WNA pemegang ITAP',
+        'syarat': 'Paspor, ITAP yang masih berlaku, KTP-el lama',
+        'estimasi_hari': 5
+      },
+      {
+        'kode': 'KTP-008',
+        'nama': 'KTP-el Pindah Datang',
+        'kategori': 'Kependudukan',
+        'deskripsi': 'Penerbitan KTP-el bagi WNI pindah datang antar daerah',
+        'syarat': 'Surat keterangan pindah datang, KK baru',
+        'estimasi_hari': 3
+      },
+      {
+        'kode': 'KTP-009',
+        'nama': 'KTP-el Luar Domisili (LD)',
+        'kategori': 'Kependudukan',
+        'deskripsi':
+            'Penerbitan KTP-el luar domisili bagi yang berdomisili di luar daerah asal',
+        'syarat':
+            'KTP lama, Surat pengantar RT/RW, Surat keterangan domisili sementara',
+        'estimasi_hari': 5
+      },
+      {
+        'kode': 'KTP-010',
+        'nama': 'KTP-el Ganti Foto/TTD',
+        'kategori': 'Kependudukan',
+        'deskripsi':
+            'Penggantian KTP-el karena perubahan foto atau tanda tangan',
+        'syarat': 'KTP-el lama, Pas foto terbaru, KK',
+        'estimasi_hari': 3
+      },
+      {
+        'kode': 'KTP-011',
+        'nama': 'KTP-el SILANDEP',
+        'kategori': 'Kependudukan',
+        'deskripsi': 'Penerbitan KTP-el melalui sistem layanan antar jemput',
+        'syarat': 'KK, Surat pengantar RT/RW, Pas foto',
+        'estimasi_hari': 3
+      },
+      // ── SKPWNI / SKPWNA ──────────────────────────────────
+      {
+        'kode': 'SKP-001',
+        'nama': 'Penerbitan SKPWNI',
+        'kategori': 'Pindah Datang',
+        'deskripsi': 'Surat Keterangan Pindah Warga Negara Indonesia',
+        'syarat': 'KK, KTP, Surat pengantar RT/RW dan kelurahan',
+        'estimasi_hari': 3
+      },
+      {
+        'kode': 'SKP-002',
+        'nama': 'Penerbitan SKPWNI Keluar + KK',
+        'kategori': 'Pindah Datang',
+        'deskripsi': 'SKPWNI keluar disertai penerbitan KK baru',
+        'syarat': 'KK lama, KTP, Surat pengantar RT/RW',
+        'estimasi_hari': 5
+      },
+      {
+        'kode': 'SKP-003',
+        'nama': 'Penerbitan SKPWNI Masuk + KK',
+        'kategori': 'Pindah Datang',
+        'deskripsi': 'SKPWNI masuk disertai penerbitan KK di daerah tujuan',
+        'syarat': 'SKPWNI dari daerah asal, KTP, Surat pengantar RT/RW tujuan',
+        'estimasi_hari': 5
+      },
+      {
+        'kode': 'SKP-004',
+        'nama': 'Penerbitan SKPWNA',
+        'kategori': 'Pindah Datang',
+        'deskripsi': 'Surat Keterangan Pindah Warga Negara Asing',
+        'syarat': 'Paspor, ITAP/ITAS, Surat ijin tinggal dari imigrasi',
+        'estimasi_hari': 7
+      },
+      // ── KK TAMBAHAN ──────────────────────────────────────
+      {
+        'kode': 'KK-004',
+        'nama': 'KK SILANDEP',
+        'kategori': 'Kartu Keluarga',
+        'deskripsi': 'Penerbitan KK melalui sistem layanan antar jemput',
+        'syarat': 'KK lama, Dokumen pendukung perubahan, KTP kepala keluarga',
+        'estimasi_hari': 5
+      },
+      // ── SKTT ─────────────────────────────────────────────
+      {
+        'kode': 'SKTT-001',
+        'nama': 'SKTT (Surat Keterangan Tinggal Tetap) bagi WNA',
+        'kategori': 'Surat Keterangan',
+        'deskripsi':
+            'Surat keterangan tinggal tetap bagi Warga Negara Asing pemegang ITAP',
+        'syarat': 'Paspor, ITAP, Surat rekomendasi imigrasi, KK',
+        'estimasi_hari': 7
+      },
+      // ── AKTA TAMBAHAN ────────────────────────────────────
+      {
+        'kode': 'AK-005',
+        'nama': 'Penerbitan Akta Perceraian',
+        'kategori': 'Pencatatan Sipil',
+        'deskripsi':
+            'Penerbitan akta perceraian berdasarkan putusan pengadilan',
+        'syarat':
+            'Putusan pengadilan yang berkekuatan hukum tetap, Akta perkawinan, KTP, KK',
+        'estimasi_hari': 7
+      },
+      {
+        'kode': 'AK-006',
+        'nama': 'Pencatatan Pengangkatan, Pengakuan dan Pengesahan Anak',
+        'kategori': 'Pencatatan Sipil',
+        'deskripsi': 'Pencatatan perubahan status anak secara hukum',
+        'syarat':
+            'Penetapan pengadilan, Akta kelahiran anak, KTP orang tua, KK',
+        'estimasi_hari': 14
+      },
+      {
+        'kode': 'AK-007',
+        'nama': 'Pencatatan Perubahan Nama',
+        'kategori': 'Pencatatan Sipil',
+        'deskripsi':
+            'Pencatatan perubahan nama berdasarkan penetapan pengadilan',
+        'syarat': 'Penetapan pengadilan, Akta kelahiran, KTP, KK',
+        'estimasi_hari': 7
+      },
+      {
+        'kode': 'AK-008',
+        'nama': 'Penerbitan Kutipan Akta Kelahiran',
+        'kategori': 'Pencatatan Sipil',
+        'deskripsi': 'Penerbitan kutipan pertama akta kelahiran',
+        'syarat': 'Surat keterangan lahir, KK, KTP orang tua, Buku nikah',
+        'estimasi_hari': 7
+      },
+      {
+        'kode': 'AK-009',
+        'nama': 'Penerbitan Kutipan Ke II Akta Kelahiran',
+        'kategori': 'Pencatatan Sipil',
+        'deskripsi':
+            'Penerbitan kutipan kedua akta kelahiran karena hilang atau rusak',
+        'syarat': 'Surat kehilangan dari polisi, KK, KTP pemohon',
+        'estimasi_hari': 7
+      },
+      {
+        'kode': 'AK-010',
+        'nama': 'Penerbitan Kutipan Akta Kelahiran Karena Hilang',
+        'kategori': 'Pencatatan Sipil',
+        'deskripsi': 'Penggantian akta kelahiran yang hilang',
+        'syarat':
+            'Surat kehilangan dari polisi, Fotokopi akta lama jika ada, KK, KTP',
+        'estimasi_hari': 5
+      },
+      {
+        'kode': 'AK-011',
+        'nama': 'Penerbitan Kutipan Akta Kematian',
+        'kategori': 'Pencatatan Sipil',
+        'deskripsi': 'Penerbitan kutipan akta kematian',
+        'syarat': 'Surat keterangan kematian, KK, KTP almarhum, KTP pelapor',
+        'estimasi_hari': 3
+      },
+      {
+        'kode': 'AK-012',
+        'nama': 'Penerbitan Kutipan Akta Kematian Karena Hilang / Rusak',
+        'kategori': 'Pencatatan Sipil',
+        'deskripsi': 'Penggantian akta kematian yang hilang atau rusak',
+        'syarat':
+            'Surat kehilangan dari polisi, Fotokopi akta lama jika ada, KTP pelapor, KK',
+        'estimasi_hari': 5
+      },
+      {
+        'kode': 'AK-013',
+        'nama': 'Penerbitan Surat Keterangan Lahir Mati WNI',
+        'kategori': 'Pencatatan Sipil',
+        'deskripsi':
+            'Surat keterangan untuk bayi yang lahir dalam keadaan meninggal',
+        'syarat':
+            'Surat keterangan lahir mati dari rumah sakit/bidan, KK, KTP orang tua, Buku nikah',
+        'estimasi_hari': 3
+      },
+      {
+        'kode': 'AK-014',
+        'nama': 'Keabsahan Akta-Akta',
+        'kategori': 'Pencatatan Sipil',
+        'deskripsi':
+            'Legalisasi atau pengecekan keabsahan dokumen akta catatan sipil',
+        'syarat': 'Akta asli yang akan dilegalisasi, KTP pemohon',
+        'estimasi_hari': 3
+      },
+      // ── KIA TAMBAHAN ─────────────────────────────────────
+      {
+        'kode': 'KIA-002',
+        'nama': 'KIA (Kartu Identitas Anak) WNA',
+        'kategori': 'KIA',
+        'deskripsi': 'Penerbitan KIA bagi anak Warga Negara Asing',
+        'syarat':
+            'Paspor anak, ITAP/ITAS, Akta kelahiran, KK, KTP orang tua WNA',
+        'estimasi_hari': 5
+      },
     ];
     for (final l in list) {
       await db.insert('layanan', l);
@@ -353,7 +591,7 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getPermohonanByUser(int userId) async {
     final db = await database;
     return await db.rawQuery('''
-      SELECT p.*, l.nama as nama_layanan, l.kategori
+      SELECT p.*, l.nama as nama_layanan, l.kode as kode_layanan, l.kategori
       FROM permohonan p
       JOIN layanan l ON p.layanan_id = l.id
       WHERE p.user_id = ?
@@ -373,7 +611,7 @@ class DatabaseHelper {
   Future<Map<String, dynamic>?> getPermohonanById(int id) async {
     final db = await database;
     final res = await db.rawQuery('''
-      SELECT p.*, l.nama as nama_layanan, l.kategori
+      SELECT p.*, l.nama as nama_layanan, l.kode as kode_layanan, l.kategori
       FROM permohonan p JOIN layanan l ON p.layanan_id = l.id
       WHERE p.id = ?
     ''', [id]);

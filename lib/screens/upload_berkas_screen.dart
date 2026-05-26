@@ -34,275 +34,915 @@ class _BerkasItem {
 class _BerkasLayanan {
   static List<_BerkasItem> getBerkasWajib(
       String kodeLayanan, String namaLayanan) {
-    final nama = namaLayanan.toLowerCase();
+    switch (kodeLayanan) {
+      // ── KTP ──────────────────────────────────────────────
+      case 'KTP-001': // KTP-el Baru (Rekam)
+        return [
+          _BerkasItem(
+              id: 'pengantar_rtrw',
+              nama: 'Surat Pengantar RT/RW',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'fotokopi_kk',
+              nama: 'Fotokopi Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pas_foto',
+              nama: 'Pas Foto 3x4',
+              format: 'JPG, PNG (Maks. 2MB)',
+              wajib: true),
+        ];
 
-    // KTP
-    if (nama.contains('ktp') && nama.contains('baru')) {
-      return [
-        _BerkasItem(
-            id: 'pengantar_rtrw',
-            nama: 'Surat Pengantar RT/RW',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'fotokopi_kk',
-            nama: 'Fotokopi Kartu Keluarga',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'pas_foto',
-            nama: 'Pas Foto 3x4',
-            format: 'JPG, PNG (Maks. 2MB)',
-            wajib: true),
-      ];
-    }
-    if (nama.contains('ktp') && nama.contains('hilang')) {
-      return [
-        _BerkasItem(
-            id: 'surat_kehilangan',
-            nama: 'Surat Kehilangan dari Polisi',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'fotokopi_kk',
-            nama: 'Fotokopi Kartu Keluarga',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-      ];
-    }
-    if (nama.contains('ktp') && nama.contains('rusak')) {
-      return [
-        _BerkasItem(
-            id: 'ktp_lama',
-            nama: 'KTP-el Lama yang Rusak',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'fotokopi_kk',
-            nama: 'Fotokopi Kartu Keluarga',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-      ];
-    }
-    if (nama.contains('ktp') && nama.contains('perubahan')) {
-      return [
-        _BerkasItem(
-            id: 'ktp_lama',
-            nama: 'KTP-el Lama',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'dokumen_perubahan',
-            nama: 'Dokumen Pendukung Perubahan',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'fotokopi_kk',
-            nama: 'Fotokopi Kartu Keluarga',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-      ];
-    }
+      case 'KTP-002': // KTP-el Karena Hilang
+        return [
+          _BerkasItem(
+              id: 'surat_kehilangan',
+              nama: 'Surat Kehilangan dari Polisi',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'fotokopi_kk',
+              nama: 'Fotokopi Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
 
-    // Kartu Keluarga
-    if (nama.contains('kartu keluarga') ||
-        nama.contains(' kk ') ||
-        nama.contains('penerbitan kk')) {
-      return [
-        _BerkasItem(
-            id: 'kk_lama',
-            nama: 'Kartu Keluarga Lama',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'akta_kelahiran',
-            nama: 'Akta Kelahiran',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'sk_pindah',
-            nama: 'SK Pindah',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'surat_nikah',
-            nama: 'Surat Nikah/Cerai',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: false,
-            opsional: true,
-            keterangan: 'Opsional jika berstatus kawin/cerai'),
-      ];
-    }
-    if (nama.contains('kk') &&
-        (nama.contains('hilang') || nama.contains('rusak'))) {
-      return [
-        _BerkasItem(
-            id: 'surat_kehilangan',
-            nama: 'Surat Kehilangan dari Polisi',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'ktp_kepala',
-            nama: 'KTP Kepala Keluarga',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-      ];
-    }
+      case 'KTP-003': // KTP-el Karena Rusak
+        return [
+          _BerkasItem(
+              id: 'ktp_lama',
+              nama: 'KTP-el Lama yang Rusak',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'fotokopi_kk',
+              nama: 'Fotokopi Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
 
-    // Akta Kelahiran
-    if (nama.contains('akta kelahiran') && nama.contains('baru')) {
-      return [
-        _BerkasItem(
-            id: 'surat_lahir',
-            nama: 'Surat Keterangan Lahir',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'kk',
-            nama: 'Kartu Keluarga',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'ktp_ortu',
-            nama: 'KTP Orang Tua',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'buku_nikah',
-            nama: 'Buku Nikah',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-      ];
-    }
-    if (nama.contains('akta kelahiran') && nama.contains('hilang')) {
-      return [
-        _BerkasItem(
-            id: 'surat_kehilangan',
-            nama: 'Surat Kehilangan dari Polisi',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'akta_lama',
-            nama: 'Fotokopi Akta Lama',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-      ];
-    }
-    if (nama.contains('akta perkawinan')) {
-      return [
-        _BerkasItem(
-            id: 'surat_nikah',
-            nama: 'Surat Nikah dari KUA/Gereja',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'ktp',
-            nama: 'KTP Kedua Mempelai',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'kk',
-            nama: 'Kartu Keluarga',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-      ];
-    }
-    if (nama.contains('akta kematian')) {
-      return [
-        _BerkasItem(
-            id: 'surat_kematian',
-            nama: 'Surat Keterangan Kematian',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'kk',
-            nama: 'Kartu Keluarga',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'ktp_almarhum',
-            nama: 'KTP Almarhum/Almarhumah',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-      ];
-    }
+      case 'KTP-004': // KTP-el Perubahan Data
+        return [
+          _BerkasItem(
+              id: 'ktp_lama',
+              nama: 'KTP-el Lama',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'dokumen_perubahan',
+              nama: 'Dokumen Pendukung Perubahan',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true,
+              keterangan: 'Contoh: akta nikah, ijazah, surat pengadilan'),
+          _BerkasItem(
+              id: 'fotokopi_kk',
+              nama: 'Fotokopi Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
 
-    // KIA
-    if (nama.contains('kartu identitas anak') || nama.contains('kia')) {
-      return [
-        _BerkasItem(
-            id: 'akta_kelahiran',
-            nama: 'Akta Kelahiran',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'kk',
-            nama: 'Kartu Keluarga',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'ktp_ortu',
-            nama: 'KTP Orang Tua',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-      ];
-    }
+      // ── KARTU KELUARGA ────────────────────────────────────
+      case 'KK-001': // Penerbitan KK Baru
+        return [
+          _BerkasItem(
+              id: 'kk_lama',
+              nama: 'Kartu Keluarga Lama',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'akta_kelahiran',
+              nama: 'Akta Kelahiran',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'sk_pindah',
+              nama: 'Surat Keterangan Pindah',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'surat_nikah',
+              nama: 'Surat Nikah/Cerai',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: false,
+              opsional: true,
+              keterangan: 'Opsional jika berstatus kawin/cerai'),
+        ];
 
-    // Pindah
-    if (nama.contains('pindah')) {
-      return [
-        _BerkasItem(
-            id: 'kk',
-            nama: 'Kartu Keluarga',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'ktp',
-            nama: 'KTP',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'pengantar_rtrw',
-            nama: 'Surat Pengantar RT/RW',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-      ];
-    }
+      case 'KK-002': // KK Karena Hilang/Rusak
+        return [
+          _BerkasItem(
+              id: 'surat_kehilangan',
+              nama: 'Surat Kehilangan dari Polisi',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_kepala',
+              nama: 'KTP Kepala Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
 
-    // Domisili
-    if (nama.contains('domisili')) {
-      return [
-        _BerkasItem(
-            id: 'ktp',
-            nama: 'KTP',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'kk',
-            nama: 'Kartu Keluarga',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-        _BerkasItem(
-            id: 'pengantar_rtrw',
-            nama: 'Surat Pengantar RT/RW',
-            format: 'JPG, PNG, PDF (Maks. 2MB)',
-            wajib: true),
-      ];
-    }
+      case 'KK-003': // KK Perubahan Data
+        return [
+          _BerkasItem(
+              id: 'kk_lama',
+              nama: 'Kartu Keluarga Lama',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'dokumen_perubahan',
+              nama: 'Dokumen Pendukung Perubahan Data',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true,
+              keterangan:
+                  'Contoh: akta lahir, ijazah, akta nikah, surat cerai'),
+          _BerkasItem(
+              id: 'ktp_kepala',
+              nama: 'KTP Kepala Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
 
-    // Default
-    return [
-      _BerkasItem(
-          id: 'ktp',
-          nama: 'Kartu Tanda Penduduk (KTP)',
-          format: 'JPG, PNG, PDF (Maks. 2MB)',
-          wajib: true),
-      _BerkasItem(
-          id: 'kk',
-          nama: 'Kartu Keluarga',
-          format: 'JPG, PNG, PDF (Maks. 2MB)',
-          wajib: true),
-    ];
+      // ── AKTA ─────────────────────────────────────────────
+      case 'AK-001': // Akta Kelahiran Baru
+        return [
+          _BerkasItem(
+              id: 'surat_lahir',
+              nama: 'Surat Keterangan Lahir',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true,
+              keterangan: 'Dari rumah sakit, bidan, atau puskesmas'),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_ortu',
+              nama: 'KTP Orang Tua',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'buku_nikah',
+              nama: 'Buku Nikah / Akta Perkawinan',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'AK-002': // Akta Kelahiran Hilang
+        return [
+          _BerkasItem(
+              id: 'surat_kehilangan',
+              nama: 'Surat Kehilangan dari Polisi',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'akta_lama',
+              nama: 'Fotokopi Akta Kelahiran Lama',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: false,
+              opsional: true,
+              keterangan: 'Jika masih ada salinannya'),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_pemohon',
+              nama: 'KTP Pemohon',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'AK-003': // Akta Perkawinan
+        return [
+          _BerkasItem(
+              id: 'surat_nikah',
+              nama: 'Surat Nikah dari KUA/Gereja',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_mempelai',
+              nama: 'KTP Kedua Mempelai',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'akta_lahir_mempelai',
+              nama: 'Akta Kelahiran Kedua Mempelai',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'AK-004': // Akta Kematian
+        return [
+          _BerkasItem(
+              id: 'surat_kematian',
+              nama: 'Surat Keterangan Kematian',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true,
+              keterangan: 'Dari rumah sakit, puskesmas, atau lurah'),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_almarhum',
+              nama: 'KTP Almarhum/Almarhumah',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_pelapor',
+              nama: 'KTP Pelapor',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      // ── KIA ──────────────────────────────────────────────
+      case 'KIA-001': // Kartu Identitas Anak
+        return [
+          _BerkasItem(
+              id: 'akta_kelahiran',
+              nama: 'Akta Kelahiran Anak',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_ortu',
+              nama: 'KTP Orang Tua',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pas_foto_anak',
+              nama: 'Pas Foto Anak 2x3',
+              format: 'JPG, PNG (Maks. 2MB)',
+              wajib: false,
+              opsional: true,
+              keterangan: 'Opsional untuk anak usia 5 tahun ke atas'),
+        ];
+
+      // ── PINDAH ───────────────────────────────────────────
+      case 'PD-001': // Surat Keterangan Pindah WNI
+        return [
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp',
+              nama: 'KTP',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pengantar_rtrw',
+              nama: 'Surat Pengantar RT/RW',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pengantar_kelurahan',
+              nama: 'Surat Pengantar Kelurahan',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'PD-002': // Surat Keterangan Pindah Masuk
+        return [
+          _BerkasItem(
+              id: 'surat_pindah_asal',
+              nama: 'Surat Keterangan Pindah dari Daerah Asal',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk_asal',
+              nama: 'Kartu Keluarga Daerah Asal',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp',
+              nama: 'KTP',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pengantar_rtrw_tujuan',
+              nama: 'Surat Pengantar RT/RW Tujuan',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      // ── DOMISILI ─────────────────────────────────────────
+      case 'SKD-001': // Surat Keterangan Domisili
+        return [
+          _BerkasItem(
+              id: 'ktp',
+              nama: 'KTP',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pengantar_rtrw',
+              nama: 'Surat Pengantar RT/RW',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'bukti_tinggal',
+              nama: 'Bukti Tempat Tinggal',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: false,
+              opsional: true,
+              keterangan: 'Contoh: tagihan listrik, kontrak sewa'),
+        ];
+
+      // ── KTP TAMBAHAN ─────────────────────────────────────
+      case 'KTP-005': // KTP-el Pindah Datang Bagi WNI Dari Luar Negeri
+        return [
+          _BerkasItem(
+              id: 'paspor',
+              nama: 'Paspor',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'skpln',
+              nama: 'SKPLN / SPLP dari Kedutaan',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pas_foto',
+              nama: 'Pas Foto 3x4',
+              format: 'JPG, PNG (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'KTP-006': // KTP-el Pindah Datang WNA Dengan ITAP
+        return [
+          _BerkasItem(
+              id: 'paspor',
+              nama: 'Paspor',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'itap',
+              nama: 'ITAP (Izin Tinggal Tetap)',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'surat_pindah_imigrasi',
+              nama: 'Surat Pindah Datang dari Imigrasi',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pas_foto',
+              nama: 'Pas Foto 3x4',
+              format: 'JPG, PNG (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'KTP-007': // KTP-el Perpanjangan WNA Dengan ITAP
+        return [
+          _BerkasItem(
+              id: 'paspor',
+              nama: 'Paspor',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'itap',
+              nama: 'ITAP yang Masih Berlaku',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_lama',
+              nama: 'KTP-el Lama',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'KTP-008': // KTP-el Pindah Datang (WNI antar daerah)
+        return [
+          _BerkasItem(
+              id: 'surat_pindah_datang',
+              nama: 'Surat Keterangan Pindah Datang (SKPD)',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk_baru',
+              nama: 'Kartu Keluarga Baru',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pas_foto',
+              nama: 'Pas Foto 3x4',
+              format: 'JPG, PNG (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'KTP-009': // KTP-el Luar Domisili (LD)
+        return [
+          _BerkasItem(
+              id: 'ktp_lama',
+              nama: 'KTP-el Lama',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pengantar_rtrw',
+              nama: 'Surat Pengantar RT/RW Domisili Sementara',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'skd_sementara',
+              nama: 'Surat Keterangan Domisili Sementara',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'KTP-010': // KTP-el Ganti Foto/TTD
+        return [
+          _BerkasItem(
+              id: 'ktp_lama',
+              nama: 'KTP-el Lama',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pas_foto',
+              nama: 'Pas Foto Terbaru 3x4',
+              format: 'JPG, PNG (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'KTP-011': // KTP-el SILANDEP
+        return [
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pengantar_rtrw',
+              nama: 'Surat Pengantar RT/RW',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pas_foto',
+              nama: 'Pas Foto 3x4',
+              format: 'JPG, PNG (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      // ── SKPWNI / SKPWNA ──────────────────────────────────
+      case 'SKP-001': // Penerbitan SKPWNI
+        return [
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp',
+              nama: 'KTP',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pengantar_rtrw',
+              nama: 'Surat Pengantar RT/RW',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pengantar_kelurahan',
+              nama: 'Surat Pengantar Kelurahan',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'SKP-002': // Penerbitan SKPWNI Keluar + KK
+        return [
+          _BerkasItem(
+              id: 'kk_lama',
+              nama: 'Kartu Keluarga Lama',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp',
+              nama: 'KTP',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pengantar_rtrw',
+              nama: 'Surat Pengantar RT/RW',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pengantar_kelurahan',
+              nama: 'Surat Pengantar Kelurahan',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'SKP-003': // Penerbitan SKPWNI Masuk + KK
+        return [
+          _BerkasItem(
+              id: 'skpwni_asal',
+              nama: 'SKPWNI dari Daerah Asal',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp',
+              nama: 'KTP',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'pengantar_rtrw_tujuan',
+              nama: 'Surat Pengantar RT/RW Tujuan',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk_asal',
+              nama: 'Kartu Keluarga Daerah Asal',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'SKP-004': // Penerbitan SKPWNA
+        return [
+          _BerkasItem(
+              id: 'paspor',
+              nama: 'Paspor',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'itap_itas',
+              nama: 'ITAP / ITAS',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ijin_tinggal_imigrasi',
+              nama: 'Surat Ijin Tinggal dari Imigrasi',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      // ── KK TAMBAHAN ──────────────────────────────────────
+      case 'KK-004': // KK SILANDEP
+        return [
+          _BerkasItem(
+              id: 'kk_lama',
+              nama: 'Kartu Keluarga Lama',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_kepala',
+              nama: 'KTP Kepala Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'dokumen_pendukung',
+              nama: 'Dokumen Pendukung Perubahan',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: false,
+              opsional: true,
+              keterangan: 'Jika ada perubahan data anggota keluarga'),
+        ];
+
+      // ── SKTT ─────────────────────────────────────────────
+      case 'SKTT-001': // SKTT bagi WNA
+        return [
+          _BerkasItem(
+              id: 'paspor',
+              nama: 'Paspor',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'itap',
+              nama: 'ITAP (Izin Tinggal Tetap)',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'rekomendasi_imigrasi',
+              nama: 'Surat Rekomendasi dari Imigrasi',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      // ── AKTA TAMBAHAN ────────────────────────────────────
+      case 'AK-005': // Akta Perceraian
+        return [
+          _BerkasItem(
+              id: 'putusan_pengadilan',
+              nama: 'Putusan Pengadilan yang Berkekuatan Hukum Tetap',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'akta_perkawinan',
+              nama: 'Akta Perkawinan',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp',
+              nama: 'KTP Pemohon',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'AK-006': // Pengangkatan, Pengakuan dan Pengesahan Anak
+        return [
+          _BerkasItem(
+              id: 'penetapan_pengadilan',
+              nama: 'Penetapan Pengadilan',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'akta_kelahiran_anak',
+              nama: 'Akta Kelahiran Anak',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_ortu',
+              nama: 'KTP Orang Tua',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'AK-007': // Pencatatan Perubahan Nama
+        return [
+          _BerkasItem(
+              id: 'penetapan_pengadilan',
+              nama: 'Penetapan Pengadilan',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'akta_kelahiran',
+              nama: 'Akta Kelahiran',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp',
+              nama: 'KTP',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'AK-008': // Penerbitan Kutipan Akta Kelahiran (pertama)
+        return [
+          _BerkasItem(
+              id: 'surat_lahir',
+              nama: 'Surat Keterangan Lahir',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true,
+              keterangan: 'Dari rumah sakit, bidan, atau puskesmas'),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_ortu',
+              nama: 'KTP Orang Tua',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'buku_nikah',
+              nama: 'Buku Nikah / Akta Perkawinan',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'AK-009': // Penerbitan Kutipan Ke II Akta Kelahiran
+        return [
+          _BerkasItem(
+              id: 'surat_kehilangan',
+              nama: 'Surat Kehilangan dari Polisi',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_pemohon',
+              nama: 'KTP Pemohon',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'fotokopi_akta_lama',
+              nama: 'Fotokopi Akta Kelahiran Lama',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: false,
+              opsional: true,
+              keterangan: 'Jika masih ada salinannya'),
+        ];
+
+      case 'AK-010': // Penerbitan Kutipan Akta Kelahiran Karena Hilang
+        return [
+          _BerkasItem(
+              id: 'surat_kehilangan',
+              nama: 'Surat Kehilangan dari Polisi',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_pemohon',
+              nama: 'KTP Pemohon',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'fotokopi_akta_lama',
+              nama: 'Fotokopi Akta Kelahiran Lama',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: false,
+              opsional: true,
+              keterangan: 'Jika masih ada salinannya'),
+        ];
+
+      case 'AK-011': // Penerbitan Kutipan Akta Kematian
+        return [
+          _BerkasItem(
+              id: 'surat_kematian',
+              nama: 'Surat Keterangan Kematian',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true,
+              keterangan: 'Dari rumah sakit, puskesmas, atau lurah'),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_almarhum',
+              nama: 'KTP Almarhum/Almarhumah',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_pelapor',
+              nama: 'KTP Pelapor',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'AK-012': // Penerbitan Kutipan Akta Kematian Karena Hilang/Rusak
+        return [
+          _BerkasItem(
+              id: 'surat_kehilangan',
+              nama: 'Surat Kehilangan dari Polisi',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'fotokopi_akta_lama',
+              nama: 'Fotokopi Akta Kematian Lama',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: false,
+              opsional: true,
+              keterangan: 'Jika masih ada salinannya'),
+          _BerkasItem(
+              id: 'ktp_pelapor',
+              nama: 'KTP Pelapor',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'AK-013': // Surat Keterangan Lahir Mati WNI
+        return [
+          _BerkasItem(
+              id: 'surat_lahir_mati',
+              nama: 'Surat Keterangan Lahir Mati dari RS/Bidan',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_ortu',
+              nama: 'KTP Orang Tua',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'buku_nikah',
+              nama: 'Buku Nikah / Akta Perkawinan',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      case 'AK-014': // Keabsahan Akta-Akta
+        return [
+          _BerkasItem(
+              id: 'akta_asli',
+              nama: 'Akta Asli yang Akan Dilegalisasi',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_pemohon',
+              nama: 'KTP Pemohon',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'surat_permohonan',
+              nama: 'Surat Permohonan Legalisasi',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: false,
+              opsional: true,
+              keterangan: 'Jika diperlukan oleh instansi tujuan'),
+        ];
+
+      // ── KIA TAMBAHAN ─────────────────────────────────────
+      case 'KIA-002': // KIA WNA
+        return [
+          _BerkasItem(
+              id: 'paspor_anak',
+              nama: 'Paspor Anak',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'itap_itas_anak',
+              nama: 'ITAP / ITAS Anak',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'akta_kelahiran',
+              nama: 'Akta Kelahiran Anak',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'ktp_ortu_wna',
+              nama: 'KTP-el / Dokumen Identitas Orang Tua WNA',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+
+      // ── DEFAULT (fallback) ────────────────────────────────
+      default:
+        return [
+          _BerkasItem(
+              id: 'ktp',
+              nama: 'Kartu Tanda Penduduk (KTP)',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+          _BerkasItem(
+              id: 'kk',
+              nama: 'Kartu Keluarga',
+              format: 'JPG, PNG, PDF (Maks. 2MB)',
+              wajib: true),
+        ];
+    }
   }
 }
 
@@ -334,7 +974,10 @@ class _UploadBerkasScreenState extends State<UploadBerkasScreen> {
   void initState() {
     super.initState();
     final namaLayanan = widget.permohonanData['nama_layanan']?.toString() ?? '';
-    final kodeLayanan = widget.layananData?['kode']?.toString() ?? '';
+    // Ambil kode dari permohonanData (via JOIN kode_layanan) atau fallback ke layananData
+    final kodeLayanan = widget.permohonanData['kode_layanan']?.toString() ??
+        widget.layananData?['kode']?.toString() ??
+        '';
     _berkasWajib = _BerkasLayanan.getBerkasWajib(kodeLayanan, namaLayanan);
   }
 
