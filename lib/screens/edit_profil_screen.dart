@@ -19,6 +19,9 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
   final _noKkController = TextEditingController();
   final _namaController = TextEditingController();
   final _waController = TextEditingController();
+  final _alamatController = TextEditingController();
+  final _rtController = TextEditingController();
+  final _rwController = TextEditingController();
 
   String? _selectedJenisKelamin;
   String? _selectedProvinsi;
@@ -90,6 +93,9 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
     _noKkController.dispose();
     _namaController.dispose();
     _waController.dispose();
+    _alamatController.dispose();
+    _rtController.dispose();
+    _rwController.dispose();
     super.dispose();
   }
 
@@ -113,6 +119,10 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
         _selectedKabupaten = user['kabupaten']?.toString().toUpperCase();
         _selectedKecamatan = user['kecamatan']?.toString().toUpperCase();
         _selectedKelurahan = user['kelurahan']?.toString().toUpperCase();
+
+        _alamatController.text = user['alamat']?.toString() ?? '';
+        _rtController.text = user['rt']?.toString() ?? '';
+        _rwController.text = user['rw']?.toString() ?? '';
       });
     }
   }
@@ -125,7 +135,9 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
         _nikController.text.trim().isNotEmpty &&
         _selectedJenisKelamin != null &&
         _selectedProvinsi != null &&
-        _selectedKabupaten != null;
+        _selectedKabupaten != null &&
+        _selectedKecamatan != null &&
+        _alamatController.text.trim().isNotEmpty;
 
     await DatabaseHelper.instance.updateUser(_userId!, {
       'nik': _nikController.text.trim(),
@@ -137,6 +149,9 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
       'kabupaten': _selectedKabupaten,
       'kecamatan': _selectedKecamatan,
       'kelurahan': _selectedKelurahan,
+      'alamat': _alamatController.text.trim(),
+      'rt': _rtController.text.trim(),
+      'rw': _rwController.text.trim(),
       'is_profil_lengkap': isLengkap ? 1 : 0,
     });
 
@@ -292,6 +307,39 @@ class _EditProfilScreenState extends State<EditProfilScreen> {
                     onChanged: (v) =>
                         setState(() => _selectedKelurahan = v.toUpperCase()),
                   ),
+                const SizedBox(height: 14),
+                _EditableFieldSimple(
+                  label: 'Alamat Lengkap',
+                  value: _alamatController.text,
+                  hint: 'Jl. Contoh No. 10',
+                  onChanged: (v) => setState(() => _alamatController.text = v),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _EditableFieldSimple(
+                        label: 'RT',
+                        value: _rtController.text,
+                        hint: '001',
+                        onChanged: (v) =>
+                            setState(() => _rtController.text = v),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _EditableFieldSimple(
+                        label: 'RW',
+                        value: _rwController.text,
+                        hint: '001',
+                        onChanged: (v) =>
+                            setState(() => _rwController.text = v),
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 100),
@@ -459,8 +507,17 @@ class _EditableFieldSimple extends StatefulWidget {
   final String label;
   final String value;
   final ValueChanged<String> onChanged;
-  const _EditableFieldSimple(
-      {required this.label, required this.value, required this.onChanged});
+  final String? hint;
+  final TextInputType? keyboardType;
+  const _EditableFieldSimple({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    this.hint,
+    this.keyboardType,
+    // ignore unused named param for backward compat
+    TextEditingController? controller,
+  });
 
   @override
   State<_EditableFieldSimple> createState() => _EditableFieldSimpleState();
@@ -511,9 +568,13 @@ class _EditableFieldSimpleState extends State<_EditableFieldSimple> {
         TextField(
           controller: _controller,
           onChanged: widget.onChanged,
+          keyboardType: widget.keyboardType,
           style: GoogleFonts.plusJakartaSans(
               fontSize: 13.5, color: AppColors.textPrimary),
           decoration: InputDecoration(
+            hintText: widget.hint,
+            hintStyle: GoogleFonts.plusJakartaSans(
+                fontSize: 13.5, color: AppColors.textMuted),
             filled: true,
             fillColor: AppColors.white,
             contentPadding:

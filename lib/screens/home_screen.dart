@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import '../theme/app_theme.dart';
 import '../database/database_helper.dart';
 import '../utils/session_manager.dart';
@@ -518,27 +520,17 @@ class _TealAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
-    return FutureBuilder<String?>(
-      future: SessionManager.instance.getNama(),
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _loadUserData(),
       builder: (context, snap) {
-        final nama = snap.data ?? 'Pengguna';
+        final nama = snap.data?['nama_lengkap']?.toString() ?? 'Pengguna';
+        final fotoProfil = snap.data?['foto_profil'] as String?;
         return Container(
           color: AppColors.greenPrimary,
           padding: EdgeInsets.fromLTRB(16, topPadding + 12, 16, 20),
           child: Row(
             children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.15),
-                  border: Border.all(
-                      color: Colors.white.withOpacity(0.3), width: 1.5),
-                ),
-                child: Icon(Icons.person_rounded,
-                    color: Colors.white.withOpacity(0.8), size: 26),
-              ),
+              _buildAvatarWidget(fotoProfil),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -616,6 +608,49 @@ class _TealAppBar extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  Future<Map<String, dynamic>?> _loadUserData() async {
+    final userId = await SessionManager.instance.getUserId();
+    if (userId == null) return null;
+    return DatabaseHelper.instance.getUserById(userId);
+  }
+
+  Widget _buildAvatarWidget(String? fotoProfil) {
+    if (fotoProfil != null && fotoProfil.isNotEmpty) {
+      return Container(
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
+        ),
+        child: ClipOval(
+          child: Image.file(
+            File(fotoProfil),
+            fit: BoxFit.cover,
+            width: 46,
+            height: 46,
+            errorBuilder: (_, __, ___) => _defaultAvatar(),
+          ),
+        ),
+      );
+    }
+    return _defaultAvatar();
+  }
+
+  Widget _defaultAvatar() {
+    return Container(
+      width: 46,
+      height: 46,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withOpacity(0.15),
+        border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
+      ),
+      child: Icon(Icons.person_rounded,
+          color: Colors.white.withOpacity(0.8), size: 26),
     );
   }
 
@@ -1261,6 +1296,7 @@ class _ProfilPlaceholder extends StatefulWidget {
 
 class _ProfilPlaceholderState extends State<_ProfilPlaceholder> {
   Map<String, dynamic>? _user;
+  bool _isUploadingPhoto = false;
 
   @override
   void initState() {
@@ -1273,6 +1309,136 @@ class _ProfilPlaceholderState extends State<_ProfilPlaceholder> {
     if (userId == null) return;
     final user = await DatabaseHelper.instance.getUserById(userId);
     if (mounted) setState(() => _user = user);
+  }
+
+  Future<void> _pickAndUploadPhoto(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+
+      setState(() => _isUploadingPhoto = true);
+
+      final userId = await SessionManager.instance.getUserId();
+      if (userId == null) return;
+
+      // Simpan path file lokal ke database
+      await DatabaseHelper.instance.updateFotoProfil(userId, picked.path);
+      await _loadUser();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Foto profil berhasil diperbarui',
+                style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+            backgroundColor: AppColors.greenPrimary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memilih foto: $e',
+                style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
+  }
+
+  Future<void> _deletePhoto() async {
+    final userId = await SessionManager.instance.getUserId();
+    if (userId == null) return;
+    await DatabaseHelper.instance.deleteFotoProfil(userId);
+    await _loadUser();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Foto profil dihapus',
+              style: GoogleFonts.plusJakartaSans(fontSize: 13)),
+          backgroundColor: AppColors.textSecondary,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _showFotoOptions(BuildContext context) {
+    final fotoPath = _user?['foto_profil'] as String?;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2)),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Text('Foto Profil',
+                    style: GoogleFonts.plusJakartaSans(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary)),
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera_rounded,
+                    color: AppColors.dilapakTeal),
+                title: Text('Ambil Foto',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 14)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndUploadPhoto(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library_rounded,
+                    color: AppColors.dilapakTeal),
+                title: Text('Pilih dari Galeri',
+                    style: GoogleFonts.plusJakartaSans(fontSize: 14)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndUploadPhoto(ImageSource.gallery);
+                },
+              ),
+              if (fotoPath != null && fotoPath.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline_rounded,
+                      color: Color(0xFFEF4444)),
+                  title: Text('Hapus Foto',
+                      style: GoogleFonts.plusJakartaSans(
+                          fontSize: 14, color: const Color(0xFFEF4444))),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _deletePhoto();
+                  },
+                ),
+              const SizedBox(height: 4),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showLogoutDialog(BuildContext context) {
@@ -1324,11 +1490,114 @@ class _ProfilPlaceholderState extends State<_ProfilPlaceholder> {
     );
   }
 
+  bool _isProfilLengkap() {
+    if (_user == null) return true;
+    final u = _user!;
+    return (u['nama_lengkap']?.toString().isNotEmpty ?? false) &&
+        (u['nik']?.toString().isNotEmpty ?? false) &&
+        (u['jenis_kelamin']?.toString().isNotEmpty ?? false) &&
+        (u['provinsi']?.toString().isNotEmpty ?? false) &&
+        (u['kabupaten']?.toString().isNotEmpty ?? false) &&
+        (u['kecamatan']?.toString().isNotEmpty ?? false) &&
+        (u['alamat']?.toString().isNotEmpty ?? false);
+  }
+
+  List<String> _getMissingFields() {
+    if (_user == null) return [];
+    final u = _user!;
+    final missing = <String>[];
+    if (u['nama_lengkap']?.toString().isEmpty ?? true) {
+      missing.add('Nama Lengkap');
+    }
+    if (u['nik']?.toString().isEmpty ?? true) missing.add('NIK');
+    if (u['jenis_kelamin']?.toString().isEmpty ?? true) {
+      missing.add('Jenis Kelamin');
+    }
+    if (u['provinsi']?.toString().isEmpty ?? true) missing.add('Provinsi');
+    if (u['kabupaten']?.toString().isEmpty ?? true) {
+      missing.add('Kabupaten/Kota');
+    }
+    if (u['kecamatan']?.toString().isEmpty ?? true) missing.add('Kecamatan');
+    if (u['alamat']?.toString().isEmpty ?? true) missing.add('Alamat');
+    return missing;
+  }
+
+  Widget _buildProfilAlertBanner(BuildContext context) {
+    if (_isProfilLengkap()) return const SizedBox.shrink();
+    final missing = _getMissingFields();
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFF59E0B), width: 1.2),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warning_amber_rounded,
+              color: Color(0xFFF59E0B), size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Data Profil Belum Lengkap',
+                  style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF92400E)),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Lengkapi: ${missing.join(', ')}',
+                  style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      color: const Color(0xFF92400E),
+                      height: 1.4),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () async {
+                    await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const EditProfilScreen()));
+                    await _loadUser();
+                    await widget.onRefresh();
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Lengkapi Sekarang',
+                      style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final nama = _user?['nama_lengkap']?.toString() ?? 'Pengguna';
     final email =
         _user?['email']?.toString() ?? _user?['no_whatsapp']?.toString() ?? '-';
+    final fotoProfil = _user?['foto_profil'] as String?;
 
     return Column(
       children: [
@@ -1337,13 +1606,57 @@ class _ProfilPlaceholderState extends State<_ProfilPlaceholder> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: const BoxDecoration(
-                    color: AppColors.dilapakTeal, shape: BoxShape.circle),
-                child: const Icon(Icons.person_rounded,
-                    color: AppColors.white, size: 44),
+              GestureDetector(
+                onTap: () => _showFotoOptions(context),
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: AppColors.dilapakTeal,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: AppColors.dilapakTeal.withOpacity(0.3),
+                            width: 3),
+                      ),
+                      child: _isUploadingPhoto
+                          ? const CircularProgressIndicator(
+                              color: AppColors.white, strokeWidth: 2)
+                          : (fotoProfil != null && fotoProfil.isNotEmpty
+                              ? ClipOval(
+                                  child: Image.file(
+                                    File(fotoProfil),
+                                    fit: BoxFit.cover,
+                                    width: 80,
+                                    height: 80,
+                                    errorBuilder: (_, __, ___) => const Icon(
+                                        Icons.person_rounded,
+                                        color: AppColors.white,
+                                        size: 44),
+                                  ),
+                                )
+                              : const Icon(Icons.person_rounded,
+                                  color: AppColors.white, size: 44)),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: AppColors.greenPrimary,
+                          shape: BoxShape.circle,
+                          border:
+                              Border.all(color: AppColors.white, width: 1.5),
+                        ),
+                        child: const Icon(Icons.camera_alt_rounded,
+                            color: AppColors.white, size: 13),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               Text(nama,
@@ -1356,6 +1669,7 @@ class _ProfilPlaceholderState extends State<_ProfilPlaceholder> {
                   style: GoogleFonts.plusJakartaSans(
                       fontSize: 14, color: AppColors.textSecondary)),
               const SizedBox(height: 32),
+              _buildProfilAlertBanner(context),
               _ProfileTile(
                 icon: Icons.person_outline_rounded,
                 label: 'Data Diri',

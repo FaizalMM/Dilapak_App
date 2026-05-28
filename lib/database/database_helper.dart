@@ -16,10 +16,26 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
     return await openDatabase(path,
-        version: 3, onCreate: _createDB, onUpgrade: _onUpgrade);
+        version: 5, onCreate: _createDB, onUpgrade: _onUpgrade);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 4) {
+      // Tambah kolom foto_profil jika belum ada
+      try {
+        await db.execute('ALTER TABLE users ADD COLUMN foto_profil TEXT');
+      } catch (_) {}
+    }
+
+    if (oldVersion < 5) {
+      // Tambah kolom alamat, rt, rw ke tabel users
+      for (final col in ['alamat TEXT', 'rt TEXT', 'rw TEXT']) {
+        try {
+          await db.execute('ALTER TABLE users ADD COLUMN $col');
+        } catch (_) {}
+      }
+    }
+
     if (oldVersion < 2) {
       final rows = await db.rawQuery('''
         SELECT p.id FROM permohonan p
@@ -60,6 +76,9 @@ class DatabaseHelper {
         kabupaten TEXT,
         kecamatan TEXT,
         kelurahan TEXT,
+        alamat TEXT,
+        rt TEXT,
+        rw TEXT,
         is_verified_wa INTEGER DEFAULT 0,
         is_verified_berkas INTEGER DEFAULT 0,
         is_profil_lengkap INTEGER DEFAULT 0,
@@ -67,6 +86,7 @@ class DatabaseHelper {
         status_berkas TEXT DEFAULT 'belum',
         foto_ktp TEXT,
         foto_swafoto TEXT,
+        foto_profil TEXT,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
     ''');
@@ -475,6 +495,37 @@ class DatabaseHelper {
   Future<int> updateUser(int id, Map<String, dynamic> data) async {
     final db = await database;
     return await db.update('users', data, where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Update foto profil user (set path)
+  Future<void> updateFotoProfil(int userId, String? path) async {
+    final db = await database;
+    await db.update(
+      'users',
+      {'foto_profil': path},
+      where: 'id = ?',
+      whereArgs: [userId],
+    );
+  }
+
+  /// Hapus foto profil (set null)
+  Future<void> deleteFotoProfil(int userId) async {
+    final db = await database;
+    await db.update(
+      'users',
+      {'foto_profil': null},
+      where: 'id = ?',
+      whereArgs: [userId],
+    );
+  }
+
+  /// Ambil path foto profil
+  Future<String?> getFotoProfil(int userId) async {
+    final db = await database;
+    final res = await db.query('users',
+        columns: ['foto_profil'], where: 'id = ?', whereArgs: [userId]);
+    if (res.isEmpty) return null;
+    return res.first['foto_profil'] as String?;
   }
 
   Future<bool> isWaTaken(String noWa) async {
