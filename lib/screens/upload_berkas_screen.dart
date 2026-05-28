@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -1011,14 +1013,65 @@ class _UploadBerkasScreenState extends State<UploadBerkasScreen> {
   }
 
   void _tambahBerkasPendukung() {
-    setState(() {
-      _berkasPendukung.add(_BerkasItem(
-        id: 'pendukung_${_berkasPendukung.length}',
-        nama: 'Berkas Pendukung ${_berkasPendukung.length + 1}',
-        format: 'JPG, PNG, PDF (Maks. 2MB)',
-        wajib: false,
-      ));
-    });
+    final TextEditingController namaController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Nama Berkas Pendukung',
+          style: GoogleFonts.plusJakartaSans(
+              fontSize: 15, fontWeight: FontWeight.w700),
+        ),
+        content: TextField(
+          controller: namaController,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          style: GoogleFonts.plusJakartaSans(fontSize: 13.5),
+          decoration: InputDecoration(
+            hintText: 'Contoh: Surat Keterangan RT',
+            hintStyle: GoogleFonts.plusJakartaSans(
+                color: AppColors.textMuted, fontSize: 13),
+            filled: true,
+            fillColor: AppColors.offWhite,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(10),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Batal',
+                style: GoogleFonts.plusJakartaSans(
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () {
+              final nama = namaController.text.trim();
+              Navigator.pop(ctx);
+              setState(() {
+                _berkasPendukung.add(_BerkasItem(
+                  id: 'pendukung_${_berkasPendukung.length}',
+                  nama: nama.isNotEmpty
+                      ? nama
+                      : 'Berkas Pendukung ${_berkasPendukung.length + 1}',
+                  format: 'JPG, PNG, PDF (Maks. 2MB)',
+                  wajib: false,
+                ));
+              });
+            },
+            child: Text('Tambah',
+                style: GoogleFonts.plusJakartaSans(
+                    color: AppColors.dilapakTeal, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showSnackBar(String message, Color color) {
@@ -1334,6 +1387,25 @@ class _UploadBerkasScreenState extends State<UploadBerkasScreen> {
     );
   }
 
+  void _previewBerkas(_BerkasItem berkas) {
+    if (berkas.filePath == null) return;
+    final isPdf = berkas.filePath!.toLowerCase().endsWith('.pdf');
+    if (isPdf) {
+      _showSnackBar('Preview PDF tidak didukung. Pastikan file sudah benar.',
+          AppColors.dilapakTeal);
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _PreviewImageScreen(
+          filePath: berkas.filePath!,
+          namaBerkas: berkas.nama,
+        ),
+      ),
+    );
+  }
+
   Widget _buildBerkasWajibSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1378,6 +1450,7 @@ class _UploadBerkasScreenState extends State<UploadBerkasScreen> {
                 berkas: _berkasWajib[i],
                 onPick: () => _pickFile(i),
                 onRemove: () => _removeFile(i),
+                onPreview: () => _previewBerkas(_berkasWajib[i]),
               ),
             ),
           ),
@@ -1476,6 +1549,7 @@ class _UploadBerkasScreenState extends State<UploadBerkasScreen> {
                   berkas: _berkasPendukung[i],
                   onPick: () => _pickFile(i, isPendukung: true),
                   onRemove: () => _removeFile(i, isPendukung: true),
+                  onPreview: () => _previewBerkas(_berkasPendukung[i]),
                 ),
               ),
             ),
@@ -1601,11 +1675,13 @@ class _BerkasCard extends StatelessWidget {
   final _BerkasItem berkas;
   final VoidCallback onPick;
   final VoidCallback onRemove;
+  final VoidCallback? onPreview;
 
   const _BerkasCard({
     required this.berkas,
     required this.onPick,
     required this.onRemove,
+    this.onPreview,
   });
 
   @override
@@ -1748,6 +1824,12 @@ class _BerkasCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: onPreview,
+                          child: const Icon(Icons.visibility_outlined,
+                              size: 16, color: AppColors.dilapakTeal),
+                        ),
+                        const SizedBox(width: 10),
                         GestureDetector(
                           onTap: onRemove,
                           child: const Icon(Icons.delete_outline_rounded,
@@ -2104,6 +2186,84 @@ class _SelesaiScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PreviewImageScreen extends StatelessWidget {
+  final String filePath;
+  final String namaBerkas;
+
+  const _PreviewImageScreen({
+    required this.filePath,
+    required this.namaBerkas,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text(
+          namaBerkas,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.check_circle_outline_rounded,
+                color: Color(0xFF22C55E)),
+            onPressed: () => Navigator.pop(context),
+            tooltip: 'Sudah Benar',
+          ),
+        ],
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          minScale: 0.5,
+          maxScale: 5.0,
+          child: Image.file(
+            File(filePath),
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.broken_image_outlined,
+                    color: Colors.white54, size: 48),
+                const SizedBox(height: 12),
+                Text(
+                  'Gagal memuat gambar',
+                  style: GoogleFonts.plusJakartaSans(
+                      color: Colors.white54, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: Container(
+        color: Colors.black,
+        padding: EdgeInsets.fromLTRB(
+            16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.pinch_outlined, size: 16, color: Colors.white54),
+            const SizedBox(width: 6),
+            Text(
+              'Cubit / perbesar untuk melihat detail',
+              style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12, color: Colors.white54),
+            ),
+          ],
+        ),
       ),
     );
   }

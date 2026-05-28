@@ -16,7 +16,7 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
     return await openDatabase(path,
-        version: 2, onCreate: _createDB, onUpgrade: _onUpgrade);
+        version: 3, onCreate: _createDB, onUpgrade: _onUpgrade);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -36,6 +36,11 @@ class DatabaseHelper {
           whereArgs: [row['id']],
         );
       }
+    }
+
+    if (oldVersion < 3) {
+      await db.delete('layanan');
+      await _seedLayanan(db);
     }
   }
 

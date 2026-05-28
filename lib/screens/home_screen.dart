@@ -568,28 +568,48 @@ class _TealAppBar extends StatelessWidget {
               ),
               GestureDetector(
                 onTap: onNotifTap,
-                child: Stack(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          shape: BoxShape.circle),
-                      child: const Icon(Icons.notifications_outlined,
-                          color: AppColors.white, size: 22),
-                    ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                              color: Color(0xFFFF4444),
-                              shape: BoxShape.circle)),
-                    ),
-                  ],
+                child: FutureBuilder<int>(
+                  future: _getUnreadCount(),
+                  builder: (context, countSnap) {
+                    final count = countSnap.data ?? 0;
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              shape: BoxShape.circle),
+                          child: const Icon(Icons.notifications_outlined,
+                              color: AppColors.white, size: 22),
+                        ),
+                        if (count > 0)
+                          Positioned(
+                            top: -4,
+                            right: -4,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 5, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF4444),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                    color: AppColors.greenPrimary, width: 1.5),
+                              ),
+                              child: Text(
+                                count > 99 ? '99+' : '$count',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ),
             ],
@@ -597,6 +617,12 @@ class _TealAppBar extends StatelessWidget {
         );
       },
     );
+  }
+
+  Future<int> _getUnreadCount() async {
+    final userId = await SessionManager.instance.getUserId();
+    if (userId == null) return 0;
+    return DatabaseHelper.instance.getUnreadCount(userId);
   }
 }
 
@@ -1434,6 +1460,12 @@ class _BottomNav extends StatelessWidget {
 
   const _BottomNav({required this.currentIndex, required this.onTap});
 
+  Future<int> _getUnreadCount() async {
+    final userId = await SessionManager.instance.getUserId();
+    if (userId == null) return 0;
+    return DatabaseHelper.instance.getUnreadCount(userId);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -1490,17 +1522,38 @@ class _BottomNav extends StatelessWidget {
                                     : AppColors.textMuted,
                               ),
                               if (i == 2)
-                                Positioned(
-                                  top: 0,
-                                  right: -2,
-                                  child: Container(
-                                    width: 7,
-                                    height: 7,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFFFF4444),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
+                                FutureBuilder<int>(
+                                  future: _getUnreadCount(),
+                                  builder: (context, countSnap) {
+                                    final count = countSnap.data ?? 0;
+                                    if (count == 0) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return Positioned(
+                                      top: -5,
+                                      right: -8,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 4, vertical: 1),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFFF4444),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          border: Border.all(
+                                              color: AppColors.white,
+                                              width: 1.5),
+                                        ),
+                                        child: Text(
+                                          count > 99 ? '99+' : '$count',
+                                          style: GoogleFonts.plusJakartaSans(
+                                            fontSize: 8,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
                                 ),
                             ],
                           ),
