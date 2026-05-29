@@ -262,8 +262,8 @@ class _AppBarCustom extends StatelessWidget {
         children: [
           IconButton(
             onPressed: onBack,
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                color: AppColors.textPrimary, size: 18),
+            icon: const Icon(Icons.arrow_back_rounded,
+                color: AppColors.textPrimary, size: 22),
           ),
           Text(
             'Status Permohonan',

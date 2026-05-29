@@ -711,4 +711,4 @@ class DatabaseHelper {
     final db = await database;
     return await db.update('berkas', data, where: 'id = ?', whereArgs: [id]);
   }
-}
+} 
