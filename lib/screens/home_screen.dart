@@ -17,6 +17,9 @@ import 'ubah_kata_sandi_screen.dart';
 import 'pilih_layanan_screen.dart';
 import 'login_screen.dart';
 
+// ─────────────────────────────────────────────
+// HOME SCREEN (ROOT)
+// ─────────────────────────────────────────────
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -147,7 +150,7 @@ class _UnverifiedDashboard extends StatelessWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,
       ),
       child: Column(
         children: [
@@ -158,7 +161,9 @@ class _UnverifiedDashboard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
+                  const _WelcomeSection(),
+                  const SizedBox(height: 20),
                   const _UnverifiedBannerCard(),
                   const SizedBox(height: 24),
                   _ProgressSection(
@@ -166,7 +171,7 @@ class _UnverifiedDashboard extends StatelessWidget {
                     onVerified: onVerified,
                   ),
                   const SizedBox(height: 24),
-                  const _SectionTitle(title: 'Layanan Utama'),
+                  const _LayananUtamaTappableTitle(),
                   const SizedBox(height: 12),
                   const _LayananUtamaRow(isVerified: false),
                 ],
@@ -394,6 +399,7 @@ class _StepIndicator extends StatelessWidget {
   final int number;
   final _ProgressState state;
   const _StepIndicator({required this.number, required this.state});
+
   @override
   Widget build(BuildContext context) {
     if (state == _ProgressState.done) {
@@ -445,7 +451,6 @@ class _VerifiedDashboard extends StatefulWidget {
 }
 
 class _VerifiedDashboardState extends State<_VerifiedDashboard> {
-  // Gunakan key untuk memaksa rebuild _PermohonanRecentList saat pull-to-refresh
   Key _listKey = UniqueKey();
 
   Future<void> _onRefresh() async {
@@ -460,7 +465,7 @@ class _VerifiedDashboardState extends State<_VerifiedDashboard> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.dark,
       ),
       child: Column(
         children: [
@@ -475,7 +480,9 @@ class _VerifiedDashboardState extends State<_VerifiedDashboard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
+                    const _WelcomeSection(),
+                    const SizedBox(height: 20),
                     const _VerifiedBannerCard(),
                     const SizedBox(height: 24),
                     const _LayananUtamaTappableTitle(),
@@ -492,16 +499,21 @@ class _VerifiedDashboardState extends State<_VerifiedDashboard> {
                         const _SectionTitle(title: 'Permohonan Terbaru'),
                         GestureDetector(
                           onTap: () => widget.onSwitchTab(1),
-                          child: Text('Lihat Semua',
-                              style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.dilapakTeal)),
+                          child: Text(
+                            'Lihat Semua',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.dilapakTeal,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     _PermohonanRecentList(key: _listKey),
+                    const SizedBox(height: 24),
+                    const _BantuanLayananCard(),
                   ],
                 ),
               ),
@@ -520,137 +532,86 @@ class _TealAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.of(context).padding.top;
-    return FutureBuilder<Map<String, dynamic>?>(
-      future: _loadUserData(),
-      builder: (context, snap) {
-        final nama = snap.data?['nama_lengkap']?.toString() ?? 'Pengguna';
-        final fotoProfil = snap.data?['foto_profil'] as String?;
-        return Container(
-          color: AppColors.greenPrimary,
-          padding: EdgeInsets.fromLTRB(16, topPadding + 12, 16, 20),
-          child: Row(
-            children: [
-              _buildAvatarWidget(fotoProfil),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      color: AppColors.white,
+      padding: EdgeInsets.fromLTRB(16, topPadding + 10, 16, 12),
+      child: Row(
+        children: [
+          // Logo dari assets (sama seperti splash screen)
+          Image.asset(
+            'assets/images/logo.png',
+            width: 28,
+            height: 28,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => const Icon(
+              Icons.location_city_rounded,
+              color: AppColors.dilapakTeal,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Dilapak Kota Madiun',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const Spacer(),
+          // Ikon notifikasi
+          GestureDetector(
+            onTap: onNotifTap,
+            child: FutureBuilder<int>(
+              future: _getUnreadCount(),
+              builder: (context, countSnap) {
+                final count = countSnap.data ?? 0;
+                return Stack(
+                  clipBehavior: Clip.none,
                   children: [
-                    Text('KOTA MADIUN',
-                        style: GoogleFonts.plusJakartaSans(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.white.withOpacity(0.75),
-                            letterSpacing: 0.8)),
-                    const SizedBox(height: 2),
-                    Text('Halo, $nama!',
-                        style: GoogleFonts.plusJakartaSans(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.white)),
-                    const SizedBox(height: 2),
-                    Text(
-                        'Selamat datang kembali di layanan publik Kota Madiun.',
-                        style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.white.withOpacity(0.75))),
-                  ],
-                ),
-              ),
-              GestureDetector(
-                onTap: onNotifTap,
-                child: FutureBuilder<int>(
-                  future: _getUnreadCount(),
-                  builder: (context, countSnap) {
-                    final count = countSnap.data ?? 0;
-                    return Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: const BoxDecoration(
+                        color: AppColors.dilapakBackground,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.notifications_outlined,
+                        color: AppColors.textPrimary,
+                        size: 20,
+                      ),
+                    ),
+                    if (count > 0)
+                      Positioned(
+                        top: -4,
+                        right: -4,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 5, vertical: 2),
                           decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
-                              shape: BoxShape.circle),
-                          child: const Icon(Icons.notifications_outlined,
-                              color: AppColors.white, size: 22),
-                        ),
-                        if (count > 0)
-                          Positioned(
-                            top: -4,
-                            right: -4,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 5, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFF4444),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                    color: AppColors.greenPrimary, width: 1.5),
-                              ),
-                              child: Text(
-                                count > 99 ? '99+' : '$count',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                ),
-                              ),
+                            color: const Color(0xFFFF4444),
+                            borderRadius: BorderRadius.circular(10),
+                            border:
+                                Border.all(color: AppColors.white, width: 1.5),
+                          ),
+                          child: Text(
+                            count > 99 ? '99+' : '$count',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
                             ),
                           ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
           ),
-        );
-      },
-    );
-  }
-
-  Future<Map<String, dynamic>?> _loadUserData() async {
-    final userId = await SessionManager.instance.getUserId();
-    if (userId == null) return null;
-    return DatabaseHelper.instance.getUserById(userId);
-  }
-
-  Widget _buildAvatarWidget(String? fotoProfil) {
-    if (fotoProfil != null && fotoProfil.isNotEmpty) {
-      return Container(
-        width: 46,
-        height: 46,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
-        ),
-        child: ClipOval(
-          child: Image.file(
-            File(fotoProfil),
-            fit: BoxFit.cover,
-            width: 46,
-            height: 46,
-            errorBuilder: (_, __, ___) => _defaultAvatar(),
-          ),
-        ),
-      );
-    }
-    return _defaultAvatar();
-  }
-
-  Widget _defaultAvatar() {
-    return Container(
-      width: 46,
-      height: 46,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white.withOpacity(0.15),
-        border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.5),
+        ],
       ),
-      child: Icon(Icons.person_rounded,
-          color: Colors.white.withOpacity(0.8), size: 26),
     );
   }
 
@@ -661,8 +622,69 @@ class _TealAppBar extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────
+// WIDGET SAMBUTAN (di bawah app bar, di atas banner)
+// ─────────────────────────────────────────────
+class _WelcomeSection extends StatelessWidget {
+  const _WelcomeSection();
+
+  Future<String> _getNama() async {
+    final userId = await SessionManager.instance.getUserId();
+    if (userId == null) return 'Pengguna';
+    final user = await DatabaseHelper.instance.getUserById(userId);
+    return user?['nama_lengkap']?.toString() ?? 'Pengguna';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String>(
+      future: _getNama(),
+      builder: (context, snap) {
+        final nama = snap.data ?? 'Pengguna';
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'KOTA MADIUN',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textMuted,
+                letterSpacing: 1.0,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Halo, $nama!',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+                height: 1.2,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Selamat datang kembali di layanan publik.',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w400,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// BANNER CARDS
+// ─────────────────────────────────────────────
 class _UnverifiedBannerCard extends StatelessWidget {
   const _UnverifiedBannerCard();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -671,9 +693,10 @@ class _UnverifiedBannerCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 16,
-              offset: const Offset(0, 4))
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       padding: const EdgeInsets.all(16),
@@ -693,19 +716,24 @@ class _UnverifiedBannerCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Akun Belum Terverifikasi',
-                    style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary)),
+                Text(
+                  'Akun Belum Terverifikasi',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
                 const SizedBox(height: 6),
                 Text(
-                    'Verifikasi identitas Anda untuk membuka akses penuh ke semua layanan publik digital.',
-                    style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: AppColors.textSecondary,
-                        height: 1.6)),
+                  'Verifikasi identitas Anda untuk membuka akses penuh ke semua layanan publik digital.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.textSecondary,
+                    height: 1.6,
+                  ),
+                ),
               ],
             ),
           ),
@@ -717,6 +745,7 @@ class _UnverifiedBannerCard extends StatelessWidget {
 
 class _VerifiedBannerCard extends StatelessWidget {
   const _VerifiedBannerCard();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -733,34 +762,86 @@ class _VerifiedBannerCard extends StatelessWidget {
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-                color: AppColors.dilapakTeal.withOpacity(0.15),
-                shape: BoxShape.circle),
-            child: const Icon(Icons.check_circle_rounded,
-                color: AppColors.dilapakTeal, size: 20),
+              color: AppColors.dilapakTeal.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.check_circle_rounded,
+              color: AppColors.dilapakTeal,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Akun telah diverifikasi',
-                    style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.greenPrimary)),
+                Text(
+                  'Akun telah diverifikasi',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.greenPrimary,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(
-                    'Semua layanan kini dapat diakses. Anda bisa melakukan permohonan sekarang.',
-                    style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        color: AppColors.textSecondary,
-                        height: 1.5)),
+                  'Semua layanan kini dapat diakses sepenuhnya.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.textSecondary,
+                    height: 1.5,
+                  ),
+                ),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// LAYANAN UTAMA
+// ─────────────────────────────────────────────
+
+/// Title "Layanan Utama" dengan ikon info (hanya di Layanan Utama)
+class _LayananUtamaTappableTitle extends StatelessWidget {
+  const _LayananUtamaTappableTitle();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showLayananUtamaSheet(context),
+      child: Row(
+        children: [
+          Text(
+            'Layanan Utama',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(width: 6),
+          const Icon(
+            Icons.info_outline_rounded,
+            size: 16,
+            color: AppColors.dilapakTeal,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showLayananUtamaSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _LayananUtamaSheet(),
     );
   }
 }
@@ -788,11 +869,12 @@ class _LayananUtamaRow extends StatelessWidget {
       children: [
         Expanded(
           child: _LayananBigCard(
-            icon: Icons.add_rounded,
+            icon: Icons.add_circle_outline_rounded,
             label: 'Tambah\nPermohonan',
             color: AppColors.greenPrimary,
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => const TambahPermohonanScreen())),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const TambahPermohonanScreen()),
+            ),
           ),
         ),
         const SizedBox(width: 12),
@@ -802,7 +884,8 @@ class _LayananUtamaRow extends StatelessWidget {
             label: 'Layanan\n3 in 1',
             color: AppColors.bluePrimary,
             onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const Tiga1FormScreen())),
+              MaterialPageRoute(builder: (_) => const Tiga1FormScreen()),
+            ),
           ),
         ),
       ],
@@ -813,6 +896,7 @@ class _LayananUtamaRow extends StatelessWidget {
 class _ServiceIconCard extends StatelessWidget {
   final IconData icon;
   const _ServiceIconCard({required this.icon});
+
   @override
   Widget build(BuildContext context) {
     return Expanded(
@@ -823,9 +907,10 @@ class _ServiceIconCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2))
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
           ],
         ),
         child: Center(child: Icon(icon, color: AppColors.textMuted, size: 24)),
@@ -839,11 +924,14 @@ class _LayananBigCard extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
-  const _LayananBigCard(
-      {required this.icon,
-      required this.label,
-      required this.color,
-      required this.onTap});
+
+  const _LayananBigCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -851,7 +939,9 @@ class _LayananBigCard extends StatelessWidget {
       child: Container(
         height: 110,
         decoration: BoxDecoration(
-            color: color, borderRadius: BorderRadius.circular(16)),
+          color: color,
+          borderRadius: BorderRadius.circular(16),
+        ),
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -865,20 +955,27 @@ class _LayananBigCard extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle),
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
                   child: Icon(icon, color: AppColors.white, size: 20),
                 ),
-                Icon(Icons.chevron_right_rounded,
-                    color: Colors.white.withOpacity(0.85), size: 22),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.white.withOpacity(0.85),
+                  size: 22,
+                ),
               ],
             ),
-            Text(label,
-                style: GoogleFonts.plusJakartaSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.white,
-                    height: 1.3)),
+            Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.white,
+                height: 1.3,
+              ),
+            ),
           ],
         ),
       ),
@@ -886,6 +983,174 @@ class _LayananBigCard extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────
+// BOTTOM SHEET LAYANAN UTAMA
+// ─────────────────────────────────────────────
+class _LayananUtamaSheet extends StatelessWidget {
+  const _LayananUtamaSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 12, bottom: 16),
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.borderColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+          Text(
+            'Pilih Layanan',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Silakan pilih jenis layanan dokumen kependudukan yang Anda butuhkan.',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+              height: 1.55,
+            ),
+          ),
+          const SizedBox(height: 20),
+          _SheetLayananCard(
+            icon: Icons.document_scanner_outlined,
+            iconColor: AppColors.dilapakTeal,
+            iconBackground: AppColors.dilapakTealLight,
+            title: 'Tambah Permohonan',
+            description:
+                'Permohonan pembuatan/penerbitan 1 jenis layanan dokumen kependudukan.',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => const TambahPermohonanScreen()),
+              );
+            },
+          ),
+          const SizedBox(height: 14),
+          _SheetLayananCard(
+            icon: Icons.copy_all_rounded,
+            iconColor: AppColors.bluePrimary,
+            iconBackground: const Color(0xFFEBF3FF),
+            title: 'Layanan Three In One',
+            description:
+                'Layanan pembuatan 3 dokumen kependudukan sekaligus dalam satu kali permohonan.',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const Tiga1FormScreen()),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SheetLayananCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBackground;
+  final String title;
+  final String description;
+  final VoidCallback onTap;
+
+  const _SheetLayananCard({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBackground,
+    required this.title,
+    required this.description,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderColor),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: iconBackground,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: iconColor, size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    description,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                      height: 1.6,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────
+// KATEGORI LAYANAN (tanpa ikon info)
+// ─────────────────────────────────────────────
 class _KategoriLayanan extends StatelessWidget {
   static const List<Map<String, dynamic>> _items = [
     {'icon': Icons.badge_outlined, 'label': 'Kependudukan'},
@@ -893,14 +1158,18 @@ class _KategoriLayanan extends StatelessWidget {
     {'icon': Icons.health_and_safety_outlined, 'label': 'Kesehatan'},
     {'icon': Icons.school_outlined, 'label': 'Pendidikan'},
   ];
+
   const _KategoriLayanan();
+
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: _items
           .map((item) => _KategoriCard(
-              icon: item['icon'] as IconData, label: item['label'] as String))
+                icon: item['icon'] as IconData,
+                label: item['label'] as String,
+              ))
           .toList(),
     );
   }
@@ -909,14 +1178,16 @@ class _KategoriLayanan extends StatelessWidget {
 class _KategoriCard extends StatelessWidget {
   final IconData icon;
   final String label;
+
   const _KategoriCard({required this.icon, required this.label});
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => PilihLayananScreen(kategori: label))),
+        context,
+        MaterialPageRoute(builder: (_) => PilihLayananScreen(kategori: label)),
+      ),
       child: Column(
         children: [
           Container(
@@ -927,27 +1198,35 @@ class _KategoriCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3))
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
               ],
             ),
             child: Icon(icon, color: AppColors.textSecondary, size: 24),
           ),
           const SizedBox(height: 8),
-          Text(label,
-              style: GoogleFonts.plusJakartaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary)),
+          Text(
+            label,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textPrimary,
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
+// ─────────────────────────────────────────────
+// PERMOHONAN TERBARU
+// ─────────────────────────────────────────────
 class _PermohonanRecentList extends StatefulWidget {
   const _PermohonanRecentList({super.key});
+
   @override
   State<_PermohonanRecentList> createState() => _PermohonanRecentListState();
 }
@@ -986,26 +1265,34 @@ class _PermohonanRecentListState extends State<_PermohonanRecentList> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 12,
-                offset: const Offset(0, 3))
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
+            ),
           ],
         ),
         child: Center(
-            child: Text('Belum ada permohonan',
-                style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13, color: AppColors.textMuted))),
+          child: Text(
+            'Belum ada permohonan',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 13,
+              color: AppColors.textMuted,
+            ),
+          ),
+        ),
       );
     }
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 12,
-              offset: const Offset(0, 3))
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
         ],
       ),
       child: Column(
@@ -1014,10 +1301,11 @@ class _PermohonanRecentListState extends State<_PermohonanRecentList> {
             _PermohonanRow(item: _list[i]),
             if (i < _list.length - 1)
               const Divider(
-                  height: 1,
-                  color: AppColors.borderColor,
-                  indent: 16,
-                  endIndent: 16),
+                height: 1,
+                color: AppColors.borderColor,
+                indent: 16,
+                endIndent: 16,
+              ),
           ],
         ],
       ),
@@ -1066,40 +1354,55 @@ class _PermohonanRow extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-                color: AppColors.borderColor,
-                borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Icons.description_outlined,
-                color: AppColors.textSecondary, size: 20),
+              color: AppColors.borderColor,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.description_outlined,
+              color: AppColors.textSecondary,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item['nama_layanan']?.toString() ?? '-',
-                    style: GoogleFonts.plusJakartaSans(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
+                Text(
+                  item['nama_layanan']?.toString() ?? '-',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 3),
-                Text(item['nomor_resi']?.toString() ?? '-',
-                    style: GoogleFonts.plusJakartaSans(
-                        fontSize: 11, color: AppColors.textMuted)),
+                Text(
+                  item['nomor_resi']?.toString() ?? '-',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 11,
+                    color: AppColors.textMuted,
+                  ),
+                ),
               ],
             ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-                color: _statusColor(status).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20)),
-            child: Text(_statusLabel(status),
-                style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: _statusColor(status))),
+              color: _statusColor(status).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              _statusLabel(status),
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _statusColor(status),
+              ),
+            ),
           ),
         ],
       ),
@@ -1107,97 +1410,106 @@ class _PermohonanRow extends StatelessWidget {
   }
 }
 
-class _LayananUtamaTappableTitle extends StatelessWidget {
-  const _LayananUtamaTappableTitle();
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _showLayananUtamaSheet(context),
-      child: Row(
-        children: [
-          Text('Layanan Utama',
-              style: GoogleFonts.plusJakartaSans(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary)),
-          const SizedBox(width: 6),
-          const Icon(Icons.info_outline_rounded,
-              size: 16, color: AppColors.dilapakTeal),
-        ],
-      ),
-    );
-  }
+// ─────────────────────────────────────────────
+// BANTUAN LAYANAN CARD
+// ─────────────────────────────────────────────
+class _BantuanLayananCard extends StatelessWidget {
+  const _BantuanLayananCard();
 
-  void _showLayananUtamaSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const _LayananUtamaSheet(),
-    );
-  }
-}
-
-class _LayananUtamaSheet extends StatelessWidget {
-  const _LayananUtamaSheet();
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      width: double.infinity,
+      height: 140,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            AppColors.greenPrimary,
+            Color(0xFF1E8B6E),
+          ],
+        ),
+      ),
+      clipBehavior: Clip.hardEdge,
+      child: Stack(
         children: [
-          Center(
-              child: Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 16),
+          // Decorative circles background
+          Positioned(
+            right: -20,
+            top: -20,
             child: Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: AppColors.borderColor,
-                    borderRadius: BorderRadius.circular(2))),
-          )),
-          Text('Pilih Layanan',
-              style: GoogleFonts.plusJakartaSans(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary)),
-          const SizedBox(height: 6),
-          Text(
-              'Silakan pilih jenis layanan dokumen kependudukan yang Anda butuhkan.',
-              style: GoogleFonts.plusJakartaSans(
-                  fontSize: 13, color: AppColors.textSecondary, height: 1.55)),
-          const SizedBox(height: 20),
-          _SheetLayananCard(
-            icon: Icons.document_scanner_outlined,
-            iconColor: AppColors.dilapakTeal,
-            iconBackground: AppColors.dilapakTealLight,
-            title: 'Tambah Permohonan',
-            description:
-                'Permohonan pembuatan/penerbitan 1 jenis layanan dokumen kependudukan.',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.of(context).push(MaterialPageRoute(
-                  builder: (_) => const TambahPermohonanScreen()));
-            },
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.07),
+              ),
+            ),
           ),
-          const SizedBox(height: 14),
-          _SheetLayananCard(
-            icon: Icons.copy_all_rounded,
-            iconColor: AppColors.bluePrimary,
-            iconBackground: const Color(0xFFEBF3FF),
-            title: 'Layanan Three In One',
-            description:
-                'Layanan pembuatan 3 dokumen kependudukan sekaligus dalam satu kali permohonan.',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const Tiga1FormScreen()));
-            },
+          Positioned(
+            right: 40,
+            bottom: -30,
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.05),
+              ),
+            ),
+          ),
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bantuan Layanan',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Butuh bantuan dalam permohonan Anda?\nHubungi kami.',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.8),
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+                GestureDetector(
+                  onTap: () {},
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      'Hubungi Helpdesk',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.greenPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1205,82 +1517,23 @@ class _LayananUtamaSheet extends StatelessWidget {
   }
 }
 
-class _SheetLayananCard extends StatelessWidget {
-  final IconData icon;
-  final Color iconColor;
-  final Color iconBackground;
-  final String title;
-  final String description;
-  final VoidCallback onTap;
-  const _SheetLayananCard(
-      {required this.icon,
-      required this.iconColor,
-      required this.iconBackground,
-      required this.title,
-      required this.description,
-      required this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderColor),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 3))
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                    color: iconBackground,
-                    borderRadius: BorderRadius.circular(12)),
-                child: Icon(icon, color: iconColor, size: 24)),
-            const SizedBox(width: 14),
-            Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  Text(title,
-                      style: GoogleFonts.plusJakartaSans(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary)),
-                  const SizedBox(height: 6),
-                  Text(description,
-                      style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                          height: 1.6)),
-                ])),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
+// ─────────────────────────────────────────────
+// SECTION TITLE (tanpa info icon)
+// ─────────────────────────────────────────────
 class _SectionTitle extends StatelessWidget {
   final String title;
   const _SectionTitle({required this.title});
+
   @override
   Widget build(BuildContext context) {
-    return Text(title,
-        style: GoogleFonts.plusJakartaSans(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary));
+    return Text(
+      title,
+      style: GoogleFonts.plusJakartaSans(
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textPrimary,
+      ),
+    );
   }
 }
 
@@ -1290,6 +1543,7 @@ class _SectionTitle extends StatelessWidget {
 class _ProfilPlaceholder extends StatefulWidget {
   final Future<void> Function() onRefresh;
   const _ProfilPlaceholder({required this.onRefresh});
+
   @override
   State<_ProfilPlaceholder> createState() => _ProfilPlaceholderState();
 }
@@ -1327,9 +1581,9 @@ class _ProfilPlaceholderState extends State<_ProfilPlaceholder> {
       final userId = await SessionManager.instance.getUserId();
       if (userId == null) return;
 
-      // Simpan path file lokal ke database
       await DatabaseHelper.instance.updateFotoProfil(userId, picked.path);
       await _loadUser();
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -1543,21 +1797,17 @@ class _ProfilPlaceholderState extends State<_ProfilPlaceholder> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Data Profil Belum Lengkap',
-                  style: GoogleFonts.plusJakartaSans(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF92400E)),
-                ),
+                Text('Data Profil Belum Lengkap',
+                    style: GoogleFonts.plusJakartaSans(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF92400E))),
                 const SizedBox(height: 4),
-                Text(
-                  'Lengkapi: ${missing.join(', ')}',
-                  style: GoogleFonts.plusJakartaSans(
-                      fontSize: 12,
-                      color: const Color(0xFF92400E),
-                      height: 1.4),
-                ),
+                Text('Lengkapi: ${missing.join(', ')}',
+                    style: GoogleFonts.plusJakartaSans(
+                        fontSize: 12,
+                        color: const Color(0xFF92400E),
+                        height: 1.4)),
                 const SizedBox(height: 8),
                 GestureDetector(
                   onTap: () async {
@@ -1575,13 +1825,11 @@ class _ProfilPlaceholderState extends State<_ProfilPlaceholder> {
                       color: const Color(0xFFF59E0B),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
-                      'Lengkapi Sekarang',
-                      style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white),
-                    ),
+                    child: Text('Lengkapi Sekarang',
+                        style: GoogleFonts.plusJakartaSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white)),
                   ),
                 ),
               ],
@@ -1713,11 +1961,14 @@ class _ProfileTile extends StatelessWidget {
   final String label;
   final bool isDestructive;
   final VoidCallback? onTap;
-  const _ProfileTile(
-      {required this.icon,
-      required this.label,
-      this.isDestructive = false,
-      this.onTap});
+
+  const _ProfileTile({
+    required this.icon,
+    required this.label,
+    this.isDestructive = false,
+    this.onTap,
+  });
+
   @override
   Widget build(BuildContext context) {
     final color =
@@ -1741,6 +1992,9 @@ class _ProfileTile extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────
+// BOTTOM NAV BAR
+// ─────────────────────────────────────────────
 class _NavItem {
   final IconData icon;
   final IconData activeIcon;
@@ -1759,9 +2013,9 @@ const List<_NavItem> _navItems = [
       activeIcon: Icons.description_rounded,
       label: 'Permohonan'),
   _NavItem(
-      icon: Icons.notifications_outlined,
-      activeIcon: Icons.notifications_rounded,
-      label: 'Notifikasi'),
+      icon: Icons.newspaper_outlined,
+      activeIcon: Icons.newspaper_rounded,
+      label: 'Berita'),
   _NavItem(
       icon: Icons.person_outline_rounded,
       activeIcon: Icons.person_rounded,
