@@ -244,7 +244,6 @@ class _DaftarPermohonanScreenState extends State<DaftarPermohonanScreen>
                       DetailPermohonanScreen(permohonanId: items[index]['id']),
                 ),
               );
-              // Auto refresh setelah kembali dari halaman tracking
               _loadData();
             },
           );
@@ -267,7 +266,11 @@ class _FilterOption {
 class _PermohonanCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final VoidCallback onTap;
-  const _PermohonanCard({required this.data, required this.onTap});
+
+  const _PermohonanCard({
+    required this.data,
+    required this.onTap,
+  });
 
   Color _statusColor(String s) {
     switch (s) {

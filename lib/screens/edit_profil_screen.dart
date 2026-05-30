@@ -515,8 +515,6 @@ class _EditableFieldSimple extends StatefulWidget {
     required this.onChanged,
     this.hint,
     this.keyboardType,
-    // ignore unused named param for backward compat
-    TextEditingController? controller,
   });
 
   @override
